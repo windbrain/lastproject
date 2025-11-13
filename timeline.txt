@@ -1,0 +1,5 @@
+1. python -m venv venv
+2. pip install openai
+3. pip install python-dotenv
+4. pip install streamlit
+5. streamlit run streamlit_basic.py
