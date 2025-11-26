@@ -2,9 +2,11 @@ import streamlit as st
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
-from authlib.integrations.requests_client import OAuth2Session
 from mongo_utils import get_mongo_collection
-from datetime import datetime
+import auth_service
+import db_service
+import chat_service
+import ui_components
 
 # 환경 변수 로드
 load_dotenv()
@@ -26,39 +28,31 @@ userinfo_url = "https://openidconnect.googleapis.com/v1/userinfo"
 scope = "openid email profile"
 
 # 화면 상단 로그인 버튼
-st.markdown(
-    """
-    <div style='text-align: right'>
-        <a href="?login=true">
-            <button style='font-size:16px;padding:6px 12px'>회원가입 / 로그인</button>
-        </a>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+ui_components.render_login_button()
 
 # 로그인 요청 처리
 if st.query_params.get("login") == "true" and "user_info" not in st.session_state:
-    oauth = OAuth2Session(
+    oauth = auth_service.create_oauth_session(
         client_id=google_client_id,
         client_secret=google_client_secret,
         redirect_uri=redirect_uri,
         scope=scope
     )
-    authorization_url, state = oauth.create_authorization_url(auth_url)
+    authorization_url, state = auth_service.get_authorization_url(oauth, auth_url)
     st.session_state["oauth_state"] = state
     st.markdown(f"[🔒 구글 로그인하기]({authorization_url})")
     st.stop()
 
 # 로그인 성공 후 토큰 교환
 if "code" in st.query_params and "user_info" not in st.session_state:
-    oauth = OAuth2Session(
+    oauth = auth_service.create_oauth_session(
         client_id=google_client_id,
         client_secret=google_client_secret,
         redirect_uri=redirect_uri
     )
     try:
-        token = oauth.fetch_token(
+        token = auth_service.fetch_token(
+            oauth_session=oauth,
             token_url=token_url,
             code=st.query_params["code"],
             client_id=google_client_id,
@@ -69,29 +63,20 @@ if "code" in st.query_params and "user_info" not in st.session_state:
         st.query_params.clear()
         st.stop()
 
-    userinfo = oauth.get(userinfo_url).json()
+    userinfo = auth_service.get_user_info(oauth, userinfo_url)
     st.session_state["user_info"] = userinfo
 
-    collection.insert_one({
-        "email": userinfo["email"],
-        "name": userinfo["name"],
-        "provider": "google",
-        "login_time": datetime.now()
-    })
+    db_service.log_user_login(collection, userinfo)
 
     st.query_params.clear()
     st.rerun()
 
 # 로그인된 사용자 정보 표시 (선택)
 if "user_info" in st.session_state:
-    userinfo = st.session_state["user_info"]
-    st.success(f"{userinfo['name']}님 환영합니다!")
-    st.write(f"이메일: {userinfo['email']}")
+    ui_components.display_user_info(st.session_state["user_info"])
 
 # 사이드바 링크
-with st.sidebar:
-    "[테스트1](https://www.naver.com/)"
-    "[테스트2](https://www.daum.net/)"
+ui_components.render_sidebar()
 
 # 챗봇 초기 메시지
 if "messages" not in st.session_state:
@@ -101,8 +86,7 @@ if "messages" not in st.session_state:
     }]
 
 # 이전 메시지 출력
-for msg in st.session_state["messages"]:
-    st.chat_message(msg["role"]).write(msg["content"])
+ui_components.display_chat_messages(st.session_state["messages"])
 
 # 사용자 입력 처리
 if prompt := st.chat_input():
@@ -117,26 +101,11 @@ if prompt := st.chat_input():
 
     # MongoDB 저장: 로그인 여부에 따라 사용자 정보 포함
     user = st.session_state.get("user_info", {"email": "anonymous", "name": "익명"})
-    collection.insert_one({
-        "role": "user",
-        "content": prompt,
-        "email": user["email"],
-        "name": user["name"],
-        "timestamp": datetime.now()
-    })
+    db_service.log_chat_message(collection, "user", prompt, user)
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=st.session_state["messages"]
-    )
-    msg = response.choices[0].message.content
+    msg = chat_service.get_ai_response(client, st.session_state["messages"])
+    
     st.session_state["messages"].append({"role": "assistant", "content": msg})
     st.chat_message("assistant").write(msg)
 
-    collection.insert_one({
-        "role": "assistant",
-        "content": msg,
-        "email": user["email"],
-        "name": user["name"],
-        "timestamp": datetime.now()
-    })
+    db_service.log_chat_message(collection, "assistant", msg, user)
