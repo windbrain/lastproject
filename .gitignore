@@ -9,4 +9,3 @@ venv.bak/
 __pycache__/
 *.pyc
 timeline.txt
-test1.ipynb

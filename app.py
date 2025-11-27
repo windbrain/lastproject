@@ -9,6 +9,9 @@ import auth_service
 import db_service
 import chat_service
 import ui_components
+import pandas as pd
+from pypdf import PdfReader
+import io
 
 # 환경 변수 로드
 load_dotenv()
@@ -104,17 +107,21 @@ if "messages" not in st.session_state:
 # 이전 메시지 출력
 ui_components.display_chat_messages(st.session_state["messages"])
 
-# 이미지 업로드 (채팅 입력창 위)
-with st.popover("📁 이미지", use_container_width=False):
-    uploaded_file = st.file_uploader("이미지를 드래그하거나 선택하세요", type=["png", "jpg", "jpeg"], key="chat_image_uploader")
+# 이미지 및 파일 업로드 (채팅 입력창 위)
+# CSS로 위치를 고정하기 위해 별도의 컨테이너로 묶음 (실제로는 columns가 컨테이너 역할)
+col1, col2 = st.columns(2)
+with col1:
+    with st.popover("📁 이미지", use_container_width=True):
+        uploaded_file = st.file_uploader("이미지를 드래그하거나 선택하세요", type=["png", "jpg", "jpeg"], key="chat_image_uploader")
+with col2:
+    with st.popover("📄 파일", use_container_width=True):
+        uploaded_doc = st.file_uploader("파일을 선택하세요", type=["pdf", "csv", "xlsx"], key="chat_file_uploader")
 
 # 사용자 입력 처리
 if prompt := st.chat_input("무엇이든 물어보세요"):
     if not openai_api_key:
         st.info("Please add your OpenAI API key to continue.")
         st.stop()
-
-    client = OpenAI(api_key=openai_api_key)
 
     client = OpenAI(api_key=openai_api_key)
 
@@ -142,6 +149,36 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
         with st.chat_message("user"):
             st.image(uploaded_file)
 
+    # 파일 처리
+    if uploaded_doc:
+        file_text = ""
+        try:
+            if uploaded_doc.type == "application/pdf":
+                reader = PdfReader(uploaded_doc)
+                for page in reader.pages:
+                    file_text += page.extract_text() + "\n"
+            elif uploaded_doc.type == "text/csv":
+                try:
+                    df = pd.read_csv(uploaded_doc)
+                except UnicodeDecodeError:
+                    # UTF-8 실패 시 CP949(한글)로 재시도
+                    uploaded_doc.seek(0)
+                    df = pd.read_csv(uploaded_doc, encoding='cp949')
+                file_text = df.to_markdown(index=False)
+            elif "excel" in uploaded_doc.type or uploaded_doc.name.endswith(".xlsx"):
+                df = pd.read_excel(uploaded_doc)
+                file_text = df.to_markdown(index=False)
+            
+            if file_text:
+                # 텍스트 내용에 파일 내용 추가
+                message_content[0]["text"] += f"\n\n[첨부 파일 내용 ({uploaded_doc.name})]:\n{file_text}"
+                
+                # UI에 파일 첨부 표시
+                with st.chat_message("user"):
+                    st.caption(f"📎 파일 첨부: {uploaded_doc.name}")
+        except Exception as e:
+            st.error(f"파일 처리 중 오류 발생: {e}")
+
     # 세션 상태에 메시지 추가 (OpenAI API 형식에 맞게)
     # 텍스트만 있는 경우와 이미지 포함된 경우 구분 없이 리스트 형태로 저장해도 됨
     # 하지만 기존 텍스트만 있는 경우와의 호환성을 위해 텍스트만 있으면 문자열로 저장할 수도 있으나,
@@ -161,7 +198,8 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
     if uploaded_file:
         user_msg_obj = {"role": "user", "content": message_content}
     else:
-        user_msg_obj = {"role": "user", "content": prompt}
+        # 이미지가 없더라도 파일이 첨부되었을 수 있으므로 message_content의 텍스트를 사용
+        user_msg_obj = {"role": "user", "content": message_content[0]["text"]}
 
     st.session_state["messages"].append(user_msg_obj)
 

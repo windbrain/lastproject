@@ -77,7 +77,8 @@ def render_custom_css():
         }
 
         /* 팝오버 버튼 위치 조정 (중앙 하단 고정, 반응형) */
-        [data-testid="stPopover"] {
+        /* 팝오버 버튼 위치 조정 제거 (컬럼 레이아웃 사용) */
+        /* [data-testid="stPopover"] {
             position: fixed;
             bottom: 120px;
             left: 50%;
@@ -85,14 +86,50 @@ def render_custom_css():
             width: fit-content !important;
             min-width: auto !important;
             z-index: 1000;
+        } */
+        
+        /* 팝오버 버튼 컨테이너 (Horizontal Block) 타겟팅 및 위치 고정 */
+        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stPopover"]) {
+            position: fixed;
+            bottom: 105px; /* 채팅 입력창과 겹치지 않도록 높이 상향 조정 */
+            left: 50%;
+            transform: translateX(-50%);
+            width: auto !important;
+            z-index: 9999;
+            background-color: transparent;
+            gap: 8px;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        /* 내부 요소 클릭 가능하게 복구 */
+        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stPopover"]) * {
+            pointer-events: auto;
+        }
+
+        /* 내부 컬럼 너비 자동 조정 */
+        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stPopover"]) div[data-testid="stColumn"] {
+            width: auto !important;
+            flex: 0 0 auto !important;
+            min-width: auto !important;
         }
         
-        /* 팝오버 내부 버튼 스타일 강제 조정 */
+        /* 팝오버 버튼 자체 스타일 (작게) */
         [data-testid="stPopover"] > button {
-            width: auto !important;
             border: 1px solid #e5e7eb;
             background-color: white;
             color: #374151;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 2px 8px !important;
+            font-size: 13px !important;
+            min-height: unset !important;
+            height: 32px !important;
+            border-radius: 16px !important; /* 둥근 모서리 */
+        }
+        
+        /* 팝오버 아이콘과 텍스트 간격 조정 */
+        [data-testid="stPopover"] > button > div {
+            gap: 4px !important;
         }
         </style>
     """, unsafe_allow_html=True)
