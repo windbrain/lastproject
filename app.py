@@ -1,5 +1,6 @@
 # 이 파일은 메인 애플리케이션 파일입니다. Streamlit 앱의 진입점이며, UI, 인증, 채팅, DB 로직을 조율합니다.
 import streamlit as st
+import base64
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
@@ -103,6 +104,10 @@ if "messages" not in st.session_state:
 # 이전 메시지 출력
 ui_components.display_chat_messages(st.session_state["messages"])
 
+# 이미지 업로드 (채팅 입력창 위)
+with st.popover("📁 이미지", use_container_width=False):
+    uploaded_file = st.file_uploader("이미지를 드래그하거나 선택하세요", type=["png", "jpg", "jpeg"], key="chat_image_uploader")
+
 # 사용자 입력 처리
 if prompt := st.chat_input("무엇이든 물어보세요"):
     if not openai_api_key:
@@ -111,19 +116,76 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
 
     client = OpenAI(api_key=openai_api_key)
 
-    st.session_state["messages"].append({"role": "user", "content": prompt})
+    client = OpenAI(api_key=openai_api_key)
+
+    # 메시지 내용 구성
+    message_content = []
+    
+    # 텍스트 추가
+    message_content.append({"type": "text", "text": prompt})
+    
+    # 이미지 처리
+    if uploaded_file:
+        # 이미지를 base64로 인코딩
+        image_bytes = uploaded_file.getvalue()
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        
+        # 이미지 추가
+        message_content.append({
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/jpeg;base64,{base64_image}"
+            }
+        })
+        
+        # UI에 이미지 표시 (사용자 메시지)
+        with st.chat_message("user"):
+            st.image(uploaded_file)
+
+    # 세션 상태에 메시지 추가 (OpenAI API 형식에 맞게)
+    # 텍스트만 있는 경우와 이미지 포함된 경우 구분 없이 리스트 형태로 저장해도 됨
+    # 하지만 기존 텍스트만 있는 경우와의 호환성을 위해 텍스트만 있으면 문자열로 저장할 수도 있으나,
+    # 일관성을 위해 리스트로 저장하거나, ui_components에서 처리했으므로 리스트로 저장.
+    
+    # 다만, 기존 로직이 문자열을 기대하는 부분이 있을 수 있으므로 확인 필요.
+    # ui_components.display_chat_messages는 리스트/문자열 모두 처리하도록 수정함.
+    # chat_service.get_ai_response는 messages 리스트를 그대로 전달하므로 문제 없음.
+    
+    # 사용자 메시지 UI 표시 (텍스트) - 이미지는 위에서 표시함
     with st.chat_message("user"):
         st.write(prompt)
 
+    # 세션에 저장할 메시지 객체
+    # 주의: OpenAI API는 content가 string 또는 list of content parts일 수 있음.
+    # 복잡성을 줄이기 위해 이미지가 없으면 그냥 string으로, 있으면 list로 저장.
+    if uploaded_file:
+        user_msg_obj = {"role": "user", "content": message_content}
+    else:
+        user_msg_obj = {"role": "user", "content": prompt}
+
+    st.session_state["messages"].append(user_msg_obj)
+
     # MongoDB 저장
     user = st.session_state.get("user_info", {"email": "anonymous", "name": "익명"})
-    db_service.log_chat_message(chat_collection, "user", prompt, user)
+    try:
+        # MongoDB에는 구조화된 데이터를 저장해야 나중에 복원 시 문제 없음
+        # db_service.log_chat_message는 content를 그대로 저장한다고 가정
+        db_service.log_chat_message(chat_collection, "user", user_msg_obj["content"], user)
+    except Exception as e:
+        st.error(f"메시지 저장 실패: {str(e)}")
 
     # AI 응답
-    msg = chat_service.get_ai_response(client, st.session_state["messages"])
+    try:
+        msg = chat_service.get_ai_response(client, st.session_state["messages"])
+    except Exception as e:
+        st.error(f"AI 응답 생성 실패: {str(e)}")
+        st.stop()
     
     st.session_state["messages"].append({"role": "assistant", "content": msg})
     with st.chat_message("assistant"):
         st.write(msg)
 
-    db_service.log_chat_message(chat_collection, "assistant", msg, user)
+    try:
+        db_service.log_chat_message(chat_collection, "assistant", msg, user)
+    except Exception as e:
+        st.error(f"AI 응답 저장 실패: {str(e)}")

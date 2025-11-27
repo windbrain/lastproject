@@ -71,12 +71,35 @@ def render_custom_css():
         .modal-button:hover {
             background-color: #f9fafb;
         }
+
+        .modal-button:hover {
+            background-color: #f9fafb;
+        }
+
+        /* 팝오버 버튼 위치 조정 (중앙 하단 고정, 반응형) */
+        [data-testid="stPopover"] {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: fit-content !important;
+            min-width: auto !important;
+            z-index: 1000;
+        }
+        
+        /* 팝오버 내부 버튼 스타일 강제 조정 */
+        [data-testid="stPopover"] > button {
+            width: auto !important;
+            border: 1px solid #e5e7eb;
+            background-color: white;
+            color: #374151;
+        }
         </style>
     """, unsafe_allow_html=True)
 
-@st.dialog("로그인 또는 회원 가입")
+@st.dialog("로그인")
 def login_modal(auth_url):
-    st.markdown("더 스마트한 응답, 파일 및 이미지 업로드 등을 이용할 수 있습니다.")
+    st.markdown("이전 대화기록을 계속 보고 싶다면 로그인을 해주세요")
     st.markdown("---")
     
     # 구글 로그인 버튼
@@ -110,7 +133,7 @@ def render_logout_button():
 
 def render_sidebar():
     with st.sidebar:
-        st.title("Poten")
+        st.title("Poten.Ai")
         st.markdown("---")
         st.markdown("[테스트1](https://www.naver.com/)")
         st.markdown("[테스트2](https://www.daum.net/)")
@@ -118,7 +141,14 @@ def render_sidebar():
 def display_chat_messages(messages):
     for msg in messages:
         with st.chat_message(msg["role"]):
-            st.write(msg["content"])
+            if isinstance(msg["content"], list):
+                for item in msg["content"]:
+                    if item["type"] == "text":
+                        st.write(item["text"])
+                    elif item["type"] == "image_url":
+                        st.image(item["image_url"]["url"])
+            else:
+                st.write(msg["content"])
 
 def display_user_info(user_info):
     # 사이드바 하단이나 적절한 곳에 표시

@@ -22,8 +22,8 @@ def get_chat_history(collection, user_email, limit=50):
     """
     특정 이메일의 최근 채팅 기록을 가져옵니다.
     """
-    # 시간순 정렬 (오래된 것부터)
-    cursor = collection.find({"email": user_email}).sort("timestamp", 1).limit(limit)
+    # 시간순 정렬 (최신순으로 가져와서 다시 뒤집기)
+    cursor = collection.find({"email": user_email}).sort("timestamp", -1).limit(limit)
     
     messages = []
     for doc in cursor:
@@ -31,4 +31,6 @@ def get_chat_history(collection, user_email, limit=50):
             "role": doc["role"],
             "content": doc["content"]
         })
-    return messages
+    
+    # 최신순으로 가져왔으므로 다시 시간순(과거->현재)으로 정렬
+    return messages[::-1]

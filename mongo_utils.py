@@ -1,7 +1,5 @@
 # 이 파일은 MongoDB 연결을 설정하고 컬렉션 객체를 반환하는 유틸리티 모듈입니다.
 from pymongo import MongoClient
-# 이 파일은 MongoDB 연결을 설정하고 컬렉션 객체를 반환하는 유틸리티 모듈입니다.
-from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 
