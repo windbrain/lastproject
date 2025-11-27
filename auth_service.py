@@ -1,3 +1,4 @@
+# 이 파일은 구글 OAuth 인증 관련 로직을 처리하는 모듈입니다.
 from authlib.integrations.requests_client import OAuth2Session
 
 def create_oauth_session(client_id, client_secret, redirect_uri, scope=None):
@@ -13,7 +14,7 @@ def get_authorization_url(oauth_session, auth_url):
 
 def fetch_token(oauth_session, token_url, code, client_id, client_secret):
     return oauth_session.fetch_token(
-        token_url=token_url,
+        url=token_url,
         code=code,
         client_id=client_id,
         client_secret=client_secret
