@@ -281,7 +281,9 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
         # db_service.log_chat_message는 content를 그대로 저장한다고 가정
         db_service.log_chat_message(chat_collection, "user", user_msg_obj["content"], user, st.session_state["session_id"])
     except Exception as e:
-        st.error(f"메시지 저장 실패: {str(e)}")
+        # DB 저장 실패는 사용자에게 치명적이지 않으므로 경고만 표시하거나 로그로 남김
+        print(f"메시지 저장 실패: {str(e)}")
+        # st.warning("채팅 기록 저장에 실패했습니다. (네트워크 연결 확인 필요)")
 
     # AI 응답
     try:
@@ -297,5 +299,5 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
     try:
         db_service.log_chat_message(chat_collection, "assistant", msg, user, st.session_state["session_id"])
     except Exception as e:
-        st.error(f"AI 응답 저장 실패: {str(e)}")
+        print(f"AI 응답 저장 실패: {str(e)}")
 

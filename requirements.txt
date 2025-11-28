@@ -6,7 +6,7 @@ matplotlib
 pypdf
 openpyxl
 tabulate
-pymongo
+pymongo[srv]
 authlib
 dnspython
 certifi
