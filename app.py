@@ -102,7 +102,7 @@ if "user_info" in st.session_state:
 else:
     # 로그인 버튼 렌더링 및 모달 트리거
     # 디버깅용: 배포 환경에서 리다이렉트 URI가 제대로 설정되었는지 확인
-    st.write(f"Debug: Redirect URI is {redirect_uri}") 
+    # st.write(f"Debug: Redirect URI is {redirect_uri}") 
     if ui_components.render_login_button():
         # OAuth 세션 생성 및 URL 생성
         oauth = auth_service.create_oauth_session(
