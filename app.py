@@ -39,7 +39,7 @@ ui_components.render_custom_css()
 def on_new_chat():
     st.session_state["messages"] = [{
         "role": "assistant",
-        "content": "무엇을 도와드릴까요?"
+        "content": "안녕하세요! 예비 창업자님. 창업하고 싶은 아이템이 있으신가요? 아이템을 알려주시면 잠재 고객과 전망을 분석해 드릴게요."
     }]
     st.session_state["session_id"] = None
 
@@ -52,7 +52,7 @@ def on_session_select(session_id):
         # 메시지가 없는 세션일 경우 (예외 처리)
         st.session_state["messages"] = [{
             "role": "assistant",
-            "content": "무엇을 도와드릴까요?"
+            "content": "안녕하세요! 예비 창업자님. 창업하고 싶은 아이템이 있으신가요? 아이템을 알려주시면 잠재 고객과 전망을 분석해 드릴게요."
         }]
 
 def on_delete_session(session_id):
@@ -128,18 +128,18 @@ if "code" in st.query_params and "user_info" not in st.session_state:
         st.error(f"로그인 과정에서 오류가 발생했습니다: {str(e)}")
         st.query_params.clear()
 
+
+
 # 챗봇 초기 메시지
 if "messages" not in st.session_state:
     st.session_state["messages"] = [{
         "role": "assistant",
-        "content": "무엇을 도와드릴까요?"
+        "content": "안녕하세요! 예비 창업자님. 창업하고 싶은 아이템이 있으신가요? 아이템을 알려주시면 잠재 고객과 전망을 분석해 드릴게요."
     }]
 
 # 이전 메시지 출력
 ui_components.display_chat_messages(st.session_state["messages"])
 
-# 이미지 및 파일 업로드 (채팅 입력창 위)
-# CSS로 위치를 고정하기 위해 별도의 컨테이너로 묶음 (실제로는 columns가 컨테이너 역할)
 col1, col2 = st.columns(2)
 with col1:
     with st.popover("📁 이미지", use_container_width=True):
