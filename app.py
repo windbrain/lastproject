@@ -78,11 +78,24 @@ ui_components.render_sidebar(sessions, on_session_select, on_new_chat, on_delete
 ui_components.render_header()
 
 # 로그인 상태 확인
+if "user_info" not in st.session_state:
+    # URL 토큰 확인
+    if "token" in st.query_params:
+        token = st.query_params["token"]
+        user_info = db_service.validate_login_token(login_collection, token)
+        if user_info:
+            st.session_state["user_info"] = user_info
+            # 토큰 유효하면 별도 리다이렉트 없이 진행 (URL에 토큰 유지)
+
 if "user_info" in st.session_state:
     ui_components.display_user_info(st.session_state["user_info"])
     # 로그아웃 버튼
     if ui_components.render_logout_button():
+        # 토큰 삭제
+        if "token" in st.query_params:
+            db_service.delete_login_token(login_collection, st.query_params["token"])
         st.session_state.clear()
+        st.query_params.clear()
         st.rerun()
 else:
     # 로그인 버튼 렌더링 및 모달 트리거
@@ -119,11 +132,15 @@ if "code" in st.query_params and "user_info" not in st.session_state:
         st.session_state["user_info"] = userinfo
         db_service.log_user_login(login_collection, userinfo)
         
+        # 로그인 토큰 생성 및 URL 설정
+        login_token = db_service.create_login_token(login_collection, userinfo)
+        st.query_params["token"] = login_token
+        
         # 로그인 직후에는 새 채팅 화면으로 시작 (기존 기록은 사이드바에 있음)
         on_new_chat()
             
-        st.query_params.clear()
-        st.rerun()
+        # st.query_params.clear() # 토큰 유지를 위해 주석 처리 또는 토큰만 남기기
+        # st.rerun() # query_params 설정 후 자동 리런됨
     except Exception as e:
         st.error(f"로그인 과정에서 오류가 발생했습니다: {str(e)}")
         st.query_params.clear()

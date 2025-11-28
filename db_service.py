@@ -124,3 +124,47 @@ def delete_chat_session(collection, session_id):
     collection.delete_one({"_id": ObjectId(session_id)})
     # 해당 세션의 메시지 삭제
     collection.delete_many({"session_id": session_id})
+
+def create_login_token(collection, user_info):
+    """
+    로그인 토큰을 생성하고 저장합니다.
+    """
+    import secrets
+    from datetime import timedelta
+    
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.now() + timedelta(days=1) # 1일 유효
+    
+    doc = {
+        "type": "login_token",
+        "token": token,
+        "email": user_info["email"],
+        "name": user_info["name"],
+        "created_at": datetime.now(),
+        "expires_at": expires_at
+    }
+    collection.insert_one(doc)
+    return token
+
+def validate_login_token(collection, token):
+    """
+    토큰을 검증하고 유효하면 사용자 정보를 반환합니다.
+    """
+    doc = collection.find_one({
+        "type": "login_token",
+        "token": token,
+        "expires_at": {"$gt": datetime.now()}
+    })
+    
+    if doc:
+        return {
+            "email": doc["email"],
+            "name": doc["name"]
+        }
+    return None
+
+def delete_login_token(collection, token):
+    """
+    로그인 토큰을 삭제합니다.
+    """
+    collection.delete_one({"type": "login_token", "token": token})
