@@ -168,12 +168,44 @@ def render_logout_button():
             return True
     return False
 
-def render_sidebar():
+def render_sidebar(sessions=None, on_session_select=None, on_new_chat=None, on_delete_session=None):
     with st.sidebar:
-        st.title("Poten.Ai")
+        # 새 채팅 버튼
+        if st.button("✨ 새 채팅", key="new_chat_btn", use_container_width=True):
+            if on_new_chat:
+                on_new_chat()
+        
         st.markdown("---")
+        
+        # 채팅 기록 목록
+        if sessions:
+            st.caption("최근 대화")
+            for session in sessions:
+                # 제목이 너무 길면 자르기
+                title = session['title']
+                if len(title) > 15:
+                    title = title[:15] + "..."
+                
+                col1, col2 = st.columns([5, 1])
+                with col1:
+                    if st.button(f"💬 {title}", key=f"session_{session['id']}", use_container_width=True):
+                        if on_session_select:
+                            on_session_select(session['id'])
+                with col2:
+                    if st.button("🗑️", key=f"del_{session['id']}", help="삭제"):
+                        if on_delete_session:
+                            on_delete_session(session['id'])
+        else:
+            st.caption("대화 기록이 없습니다.")
+
+        st.markdown("---")
+        # st.title("Poten.Ai") # 상단으로 이동
         st.markdown("[테스트1](https://www.naver.com/)")
-        st.markdown("[테스트2](https://www.daum.net/)")
+
+def render_header():
+    st.markdown("""
+        <h1 style='color: #4F8BF9; font-size: 24px; margin-bottom: 20px;'>Poten.Ai</h1>
+    """, unsafe_allow_html=True)
 
 def display_chat_messages(messages):
     for msg in messages:

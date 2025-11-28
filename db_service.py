@@ -34,3 +34,93 @@ def get_chat_history(collection, user_email, limit=50):
     
     # 최신순으로 가져왔으므로 다시 시간순(과거->현재)으로 정렬
     return messages[::-1]
+
+def create_chat_session(collection, user_email, title=None):
+    """
+    새로운 채팅 세션을 생성합니다.
+    """
+    if not title:
+        title = "새로운 대화"
+        
+    session = {
+        "type": "session",
+        "email": user_email,
+        "title": title,
+        "created_at": datetime.now(),
+        "updated_at": datetime.now()
+    }
+    result = collection.insert_one(session)
+    return str(result.inserted_id)
+
+def get_user_sessions(collection, user_email, limit=20):
+    """
+    사용자의 채팅 세션 목록을 가져옵니다.
+    """
+    # type: "session" 인 것만 조회
+    cursor = collection.find({"email": user_email, "type": "session"}).sort("updated_at", -1).limit(limit)
+    sessions = []
+    for doc in cursor:
+        sessions.append({
+            "id": str(doc["_id"]),
+            "title": doc.get("title", "새로운 대화"),
+            "created_at": doc["created_at"]
+        })
+    return sessions
+
+def get_session_messages(collection, session_id):
+    """
+    특정 세션의 메시지들을 가져옵니다.
+    """
+    # session_id가 있는 메시지 검색
+    cursor = collection.find({"session_id": session_id}).sort("timestamp", 1)
+    
+    messages = []
+    for doc in cursor:
+        messages.append({
+            "role": doc["role"],
+            "content": doc["content"]
+        })
+    return messages
+
+def update_session_title(collection, session_id, title):
+    """
+    세션 제목을 업데이트합니다.
+    """
+    from bson.objectid import ObjectId
+    collection.update_one(
+        {"_id": ObjectId(session_id)},
+        {"$set": {"title": title}}
+    )
+
+def log_chat_message(collection, role, content, user_info, session_id=None):
+    doc = {
+        "type": "message",
+        "role": role,
+        "content": content,
+        "email": user_info.get("email", "anonymous"),
+        "name": user_info.get("name", "익명"),
+        "timestamp": datetime.now()
+    }
+    if session_id:
+        doc["session_id"] = session_id
+
+    collection.insert_one(doc)
+    
+    # 세션 업데이트 로직
+    if session_id:
+        from bson.objectid import ObjectId
+        # 세션 문서 찾아서 updated_at 갱신
+        collection.update_one(
+            {"_id": ObjectId(session_id)},
+            {"$set": {"updated_at": datetime.now()}}
+        )
+
+def delete_chat_session(collection, session_id):
+    """
+    세션과 해당 세션의 모든 메시지를 삭제합니다.
+    """
+    from bson.objectid import ObjectId
+    # 세션 삭제
+    collection.delete_one({"_id": ObjectId(session_id)})
+    # 해당 세션의 메시지 삭제
+    collection.delete_many({"session_id": session_id})

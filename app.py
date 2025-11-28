@@ -35,8 +35,47 @@ scope = "openid email profile"
 # 커스텀 CSS 적용
 ui_components.render_custom_css()
 
-# 사이드바
-ui_components.render_sidebar()
+# 사이드바 및 세션 관리 로직
+def on_new_chat():
+    st.session_state["messages"] = [{
+        "role": "assistant",
+        "content": "무엇을 도와드릴까요?"
+    }]
+    st.session_state["session_id"] = None
+
+def on_session_select(session_id):
+    st.session_state["session_id"] = session_id
+    messages = db_service.get_session_messages(chat_collection, session_id)
+    if messages:
+        st.session_state["messages"] = messages
+    else:
+        # 메시지가 없는 세션일 경우 (예외 처리)
+        st.session_state["messages"] = [{
+            "role": "assistant",
+            "content": "무엇을 도와드릴까요?"
+        }]
+
+def on_delete_session(session_id):
+    db_service.delete_chat_session(chat_collection, session_id)
+    # 현재 보고 있는 세션을 삭제했다면 초기화
+    if st.session_state.get("session_id") == session_id:
+        on_new_chat()
+    st.rerun()
+
+# 세션 ID 초기화
+if "session_id" not in st.session_state:
+    st.session_state["session_id"] = None
+
+# 사용자 세션 목록 가져오기 (로그인 상태일 때만)
+sessions = []
+if "user_info" in st.session_state:
+    sessions = db_service.get_user_sessions(chat_collection, st.session_state["user_info"]["email"])
+
+# 사이드바 렌더링
+ui_components.render_sidebar(sessions, on_session_select, on_new_chat, on_delete_session)
+
+# 헤더 렌더링 (메인 영역 상단)
+ui_components.render_header()
 
 # 로그인 상태 확인
 if "user_info" in st.session_state:
@@ -80,16 +119,8 @@ if "code" in st.query_params and "user_info" not in st.session_state:
         st.session_state["user_info"] = userinfo
         db_service.log_user_login(login_collection, userinfo)
         
-        # 이전 채팅 기록 불러오기
-        history = db_service.get_chat_history(chat_collection, userinfo["email"])
-        if history:
-            st.session_state["messages"] = history
-        else:
-            # 기록이 없으면 초기 메시지
-            st.session_state["messages"] = [{
-                "role": "assistant",
-                "content": "무엇을 도와드릴까요?"
-            }]
+        # 로그인 직후에는 새 채팅 화면으로 시작 (기존 기록은 사이드바에 있음)
+        on_new_chat()
             
         st.query_params.clear()
         st.rerun()
@@ -155,7 +186,11 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
         try:
             if uploaded_doc.type == "application/pdf":
                 reader = PdfReader(uploaded_doc)
-                for page in reader.pages:
+                max_pages = 5
+                for i, page in enumerate(reader.pages):
+                    if i >= max_pages:
+                        file_text += f"\n\n[...내용이 너무 길어 {max_pages}페이지만 표시합니다...]"
+                        break
                     file_text += page.extract_text() + "\n"
             elif uploaded_doc.type == "text/csv":
                 try:
@@ -164,10 +199,19 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
                     # UTF-8 실패 시 CP949(한글)로 재시도
                     uploaded_doc.seek(0)
                     df = pd.read_csv(uploaded_doc, encoding='cp949')
-                file_text = df.to_markdown(index=False)
+                
+                if len(df) > 50:
+                    file_text = f"⚠️ 데이터가 너무 많아 상위 50행만 분석에 사용합니다 (총 {len(df)}행).\n"
+                    file_text += df.head(50).to_markdown(index=False)
+                else:
+                    file_text = df.to_markdown(index=False)
             elif "excel" in uploaded_doc.type or uploaded_doc.name.endswith(".xlsx"):
                 df = pd.read_excel(uploaded_doc)
-                file_text = df.to_markdown(index=False)
+                if len(df) > 50:
+                    file_text = f"⚠️ 데이터가 너무 많아 상위 50행만 분석에 사용합니다 (총 {len(df)}행).\n"
+                    file_text += df.head(50).to_markdown(index=False)
+                else:
+                    file_text = df.to_markdown(index=False)
             
             if file_text:
                 # 텍스트 내용에 파일 내용 추가
@@ -176,6 +220,8 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
                 # UI에 파일 첨부 표시
                 with st.chat_message("user"):
                     st.caption(f"📎 파일 첨부: {uploaded_doc.name}")
+                    if "⚠️" in file_text:
+                        st.caption("※ 토큰 제한으로 인해 데이터 일부만 전송되었습니다.")
         except Exception as e:
             st.error(f"파일 처리 중 오류 발생: {e}")
 
@@ -205,10 +251,18 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
 
     # MongoDB 저장
     user = st.session_state.get("user_info", {"email": "anonymous", "name": "익명"})
+    
+    # 세션 ID가 없으면 새로 생성 (첫 메시지인 경우)
+    if st.session_state["session_id"] is None and "user_info" in st.session_state:
+        # 제목 생성 (첫 메시지 내용으로)
+        title = prompt[:30] + "..." if len(prompt) > 30 else prompt
+        st.session_state["session_id"] = db_service.create_chat_session(chat_collection, user["email"], title)
+        # 사이드바 갱신을 위해 rerun 필요할 수 있음 (하지만 메시지 처리 후 자연스럽게 갱신될 것)
+        
     try:
         # MongoDB에는 구조화된 데이터를 저장해야 나중에 복원 시 문제 없음
         # db_service.log_chat_message는 content를 그대로 저장한다고 가정
-        db_service.log_chat_message(chat_collection, "user", user_msg_obj["content"], user)
+        db_service.log_chat_message(chat_collection, "user", user_msg_obj["content"], user, st.session_state["session_id"])
     except Exception as e:
         st.error(f"메시지 저장 실패: {str(e)}")
 
@@ -224,6 +278,7 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
         st.write(msg)
 
     try:
-        db_service.log_chat_message(chat_collection, "assistant", msg, user)
+        db_service.log_chat_message(chat_collection, "assistant", msg, user, st.session_state["session_id"])
     except Exception as e:
         st.error(f"AI 응답 저장 실패: {str(e)}")
+
