@@ -18,7 +18,7 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 google_client_id = os.getenv("GOOGLE_CLIENT_ID")
 google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-redirect_uri = "http://localhost:8501"  # 배포 시 Streamlit Cloud 주소로 변경
+redirect_uri = os.getenv("REDIRECT_URI") # 배포 시 환경변수로 설정 필요
 
 # 로컬 개발 시 HTTPS가 아닌 HTTP에서도 동작하도록 설정 (배포 시 제거)
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
