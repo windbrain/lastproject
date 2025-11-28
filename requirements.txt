@@ -6,3 +6,6 @@ matplotlib
 pypdf
 openpyxl
 tabulate
+pymongo
+authlib
+dnspython
