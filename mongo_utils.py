@@ -2,12 +2,13 @@
 from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
+import certifi
 
 load_dotenv()
 mongo_uri = os.getenv("MONGO_URI") 
 
 def get_mongo_collections():
-    client = MongoClient(mongo_uri)
+    client = MongoClient(mongo_uri, tlsCAFile=certifi.where())
     db = client["chat_db"]
     return db["login_logs"], db["chat_messages"]
 
