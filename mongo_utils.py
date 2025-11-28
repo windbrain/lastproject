@@ -2,7 +2,6 @@
 from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
-import certifi
 
 load_dotenv()
 mongo_uri = os.getenv("MONGO_URI") 
@@ -11,7 +10,7 @@ def get_mongo_collections():
     # 임시로 SSL 인증서 검증을 건너뛰도록 설정 (tlsAllowInvalidCertificates=True)
     if not mongo_uri:
         return None, None
-    client = MongoClient(mongo_uri, tlsCAFile=certifi.where(), tlsAllowInvalidCertificates=True)
+    client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
     db = client["chat_db"]
     return db["login_logs"], db["chat_messages"]
 
