@@ -18,10 +18,16 @@ import platform
 # 환경 변수 로드
 # 환경 변수 로드 및 공백 제거 (복사/붙여넣기 실수 방지)
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
-google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
-google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
-redirect_uri = os.getenv("REDIRECT_URI", "").strip()
+# openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
+# google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+# google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+# redirect_uri = os.getenv("REDIRECT_URI", "").strip()
+
+# [디버깅] Secrets 문제 배제를 위해 값 하드코딩 (테스트 후 반드시 복구 필요!)
+openai_api_key = os.getenv("OPENAI_API_KEY", "").strip() # API 키는 유지
+google_client_id = "684704537710-gq4iv016u3tb8f1lrb1pt4tip6nsrb3q.apps.googleusercontent.com"
+google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip() # Secret은 그대로 (URL에 안 나와서 모름)
+redirect_uri = "https://lastproject-4pqde9soaekofes8wqksoe.streamlit.app"
 
 # 필수 환경 변수 확인 (디버깅용)
 if not google_client_id or not google_client_secret:
