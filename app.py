@@ -19,8 +19,11 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 google_client_id = os.getenv("GOOGLE_CLIENT_ID")
 google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
 redirect_uri = os.getenv("REDIRECT_URI")
-if not redirect_uri:
-    redirect_uri = "http://localhost:8501" # 로컬 개발용 기본값
+# 로컬 테스트를 위해 배포 주소가 아닌 localhost를 우선 사용하도록 수정
+# 배포 시에는 아래 줄을 주석 처리하거나 .env 설정을 따르도록 해야 합니다.
+if not redirect_uri or "streamlit.app" in redirect_uri: 
+    # .env에 배포 주소가 있어도 로컬에서는 localhost로 강제 (임시 조치)
+    redirect_uri = "http://localhost:8501"
 
 # 로컬 개발 시 HTTPS가 아닌 HTTP에서도 동작하도록 설정 (배포 시 제거)
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -140,14 +143,31 @@ if "code" in st.query_params and "user_info" not in st.session_state:
         login_token = db_service.create_login_token(login_collection, userinfo)
         st.query_params["token"] = login_token
         
+        # 인증 코드 등 불필요한 파라미터 제거 (새로고침 시 재사용 방지)
+        if "code" in st.query_params:
+            del st.query_params["code"]
+        if "state" in st.query_params:
+            del st.query_params["state"]
+        
         # 로그인 직후에는 새 채팅 화면으로 시작 (기존 기록은 사이드바에 있음)
         on_new_chat()
             
-        # st.query_params.clear() # 토큰 유지를 위해 주석 처리 또는 토큰만 남기기
-        # st.rerun() # query_params 설정 후 자동 리런됨
+        st.rerun()
     except Exception as e:
         st.error(f"로그인 과정에서 오류가 발생했습니다: {str(e)}")
-        st.query_params.clear()
+        
+        # 디버깅 정보 표시 (403 에러 등 해결용)
+        with st.expander("디버깅 정보 (403 오류 시 확인)"):
+            st.write(f"**Redirect URI:** `{redirect_uri}`")
+            if google_client_id:
+                masked_id = google_client_id[:5] + "..." + google_client_id[-5:]
+                st.write(f"**Client ID:** `{masked_id}`")
+            st.info("Google Cloud Console의 '승인된 리디렉션 URI' 설정과 위 URI가 정확히 일치해야 합니다.")
+
+        # 재시도 버튼 (쿼리 파라미터 초기화)
+        if st.button("로그인 다시 시도"):
+            st.query_params.clear()
+            st.rerun()
 
 
 
