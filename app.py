@@ -33,6 +33,16 @@ else:
     # HTTPS 강제 (OAUTHLIB_INSECURE_TRANSPORT 설정 안 함)
     pass
 
+# 디버깅용 사이드바 (배포 환경 확인용 - 문제 해결 후 삭제 예정)
+with st.sidebar:
+    with st.expander("🛠️ 배포 환경 디버깅 (임시)"):
+        st.write(f"**OS:** {platform.system()}")
+        st.write(f"**Redirect URI:** `{redirect_uri}`")
+        if not redirect_uri:
+            st.error("⚠️ REDIRECT_URI가 설정되지 않았습니다!")
+        elif "localhost" in redirect_uri and platform.system() != "Windows":
+            st.warning("⚠️ 배포 환경인데 localhost가 설정되어 있습니다.")
+
 # MongoDB 연결
 login_collection, chat_collection = get_mongo_collections()
 
