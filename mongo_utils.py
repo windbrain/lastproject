@@ -3,6 +3,7 @@ from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 import certifi
+import platform
 
 load_dotenv()
 mongo_uri = os.getenv("MONGO_URI") 
@@ -10,9 +11,16 @@ mongo_uri = os.getenv("MONGO_URI")
 def get_mongo_collections():
     if not mongo_uri:
         return None, None
-    # SSL/TLS 설정 강화: tls=True, 인증서 검증 무시 -> certifi 사용으로 변경
-    # Windows 환경에서 SSL 인증서 오류 해결을 위해 certifi.where() 사용
-    client = MongoClient(mongo_uri, tls=True, tlsCAFile=certifi.where())
+    
+    # SSL/TLS 설정: OS별 분기 처리
+    if platform.system() == "Windows":
+        # Windows: certifi 필요
+        client = MongoClient(mongo_uri, tls=True, tlsCAFile=certifi.where())
+    else:
+        # Linux/Streamlit Cloud: 시스템 CA 사용 (certifi 충돌 방지)
+        # 만약 배포 환경에서 여전히 에러가 나면 tlsAllowInvalidCertificates=True 추가 고려
+        client = MongoClient(mongo_uri, tls=True)
+
     db = client["chat_db"]
     return db["login_logs"], db["chat_messages"]
 
