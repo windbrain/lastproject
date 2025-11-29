@@ -22,6 +22,14 @@ google_client_id = os.getenv("GOOGLE_CLIENT_ID")
 google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
 redirect_uri = os.getenv("REDIRECT_URI")
 
+# 필수 환경 변수 확인 (디버깅용)
+if not google_client_id or not google_client_secret:
+    st.error("🚨 오류: Google Client ID 또는 Secret이 설정되지 않았습니다. Streamlit Cloud의 Secrets 설정을 확인해주세요.")
+    st.stop()
+if google_client_id == "your_client_id_here": # 예시 값 체크
+    st.error("🚨 오류: Google Client ID가 기본값입니다. 올바른 값으로 설정해주세요.")
+    st.stop()
+
 # 로컬 개발 환경(Windows)과 배포 환경(Linux/Streamlit Cloud) 구분
 if platform.system() == "Windows":
     # 로컬 개발 시에는 .env 설정과 무관하게 localhost 강제
