@@ -16,11 +16,12 @@ import io
 import platform
 
 # 환경 변수 로드
+# 환경 변수 로드 및 공백 제거 (복사/붙여넣기 실수 방지)
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
-google_client_id = os.getenv("GOOGLE_CLIENT_ID")
-google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-redirect_uri = os.getenv("REDIRECT_URI")
+openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
+google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+redirect_uri = os.getenv("REDIRECT_URI", "").strip()
 
 # 필수 환경 변수 확인 (디버깅용)
 if not google_client_id or not google_client_secret:
