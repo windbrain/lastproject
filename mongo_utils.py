@@ -17,9 +17,8 @@ def get_mongo_collections():
         # Windows: certifi 필요
         client = MongoClient(mongo_uri, tls=True, tlsCAFile=certifi.where())
     else:
-        # Linux/Streamlit Cloud: 시스템 CA 사용 (certifi 충돌 방지)
-        # 만약 배포 환경에서 여전히 에러가 나면 tlsAllowInvalidCertificates=True 추가 고려
-        client = MongoClient(mongo_uri, tls=True)
+        # Linux/Streamlit Cloud: SSL 에러 해결을 위해 인증서 검증 임시 해제 (Nuclear Option)
+        client = MongoClient(mongo_uri, tls=True, tlsAllowInvalidCertificates=True)
 
     db = client["chat_db"]
     return db["login_logs"], db["chat_messages"]
