@@ -142,10 +142,10 @@ def login_modal(auth_url):
     # 구글 로그인 버튼
     st.markdown(
         f"""
-        <a href="{auth_url}" target="_self" class="modal-button" style="text-decoration:none; color:inherit;">
+        <a href="{auth_url}" target="_blank" class="modal-button" style="text-decoration:none; color:inherit;">
             <div style="display:flex; align-items:center; gap:10px;">
                 <img src="https://www.google.com/favicon.ico" width="20" height="20">
-                <span>Google로 계속하기</span>
+                <span>Google로 계속하기 (새 창)</span>
             </div>
         </a>
         """,
