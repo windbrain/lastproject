@@ -13,20 +13,25 @@ import pandas as pd
 from pypdf import PdfReader
 import io
 
+import platform
+
 # 환경 변수 로드
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 google_client_id = os.getenv("GOOGLE_CLIENT_ID")
 google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
 redirect_uri = os.getenv("REDIRECT_URI")
-# 로컬 테스트를 위해 배포 주소가 아닌 localhost를 우선 사용하도록 수정
-# 배포 시에는 아래 줄을 주석 처리하거나 .env 설정을 따르도록 해야 합니다.
-if not redirect_uri or "streamlit.app" in redirect_uri: 
-    # .env에 배포 주소가 있어도 로컬에서는 localhost로 강제 (임시 조치)
-    redirect_uri = "http://localhost:8501"
 
-# 로컬 개발 시 HTTPS가 아닌 HTTP에서도 동작하도록 설정 (배포 시 제거)
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+# 로컬 개발 환경(Windows)과 배포 환경(Linux/Streamlit Cloud) 구분
+if platform.system() == "Windows":
+    # 로컬 개발 시에는 .env 설정과 무관하게 localhost 강제
+    redirect_uri = "http://localhost:8501"
+    # 로컬에서는 HTTP 허용
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+else:
+    # 배포 환경에서는 환경 변수(Secrets)의 REDIRECT_URI 사용
+    # HTTPS 강제 (OAUTHLIB_INSECURE_TRANSPORT 설정 안 함)
+    pass
 
 # MongoDB 연결
 login_collection, chat_collection = get_mongo_collections()
