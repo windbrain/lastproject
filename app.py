@@ -58,7 +58,7 @@ ui_components.render_custom_css()
 def on_new_chat():
     st.session_state["messages"] = [{
         "role": "assistant",
-        "content": "안녕하세요! 예비 창업자님. 창업하고 싶은 아이템이 있으신가요? 아이템을 알려주시면 잠재 고객과 전망을 분석해 드릴게요."
+        "content": "안녕하세요! 예비 창업자님. 💡 **창업 아이템**을 알려주시면 **잠재 고객**, **시장 전망**, **SWOT**, **성공 전략**을 상세히 분석해 드릴게요!"
     }]
     st.session_state["session_id"] = None
 
@@ -71,7 +71,7 @@ def on_session_select(session_id):
         # 메시지가 없는 세션일 경우 (예외 처리)
         st.session_state["messages"] = [{
             "role": "assistant",
-            "content": "안녕하세요! 예비 창업자님. 창업하고 싶은 아이템이 있으신가요? 아이템을 알려주시면 잠재 고객과 전망을 분석해 드릴게요."
+            "content": "안녕하세요! 예비 창업자님. 💡 **창업 아이템**을 알려주시면 **잠재 고객**, **시장 전망**, **SWOT**, **성공 전략**을 상세히 분석해 드릴게요!"
         }]
 
 def on_delete_session(session_id):
@@ -189,7 +189,7 @@ if "code" in st.query_params and "user_info" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state["messages"] = [{
         "role": "assistant",
-        "content": "안녕하세요! 예비 창업자님. 창업하고 싶은 아이템이 있으신가요? 아이템을 알려주시면 잠재 고객과 전망을 분석해 드릴게요."
+        "content": "안녕하세요! 예비 창업자님. 💡 **창업 아이템**을 알려주시면 **잠재 고객**, **시장 전망**, **SWOT**, **성공 전략**을 상세히 분석해 드릴게요!"
     }]
 
 # 이전 메시지 출력
@@ -325,7 +325,8 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
 
     # AI 응답
     try:
-        msg = chat_service.get_ai_response(client, st.session_state["messages"])
+        with st.spinner("분석 중입니다... 잠시만 기다려주세요..."):
+            msg = chat_service.get_ai_response(client, st.session_state["messages"])
     except Exception as e:
         st.error(f"AI 응답 생성 실패: {str(e)}")
         st.stop()
