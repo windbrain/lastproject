@@ -214,162 +214,199 @@ if "messages" not in st.session_state:
         "content": "안녕하세요! 예비 창업자님. 💡 **창업 아이템**을 알려주시면 **잠재 고객**, **시장 전망**, **SWOT**, **성공 전략**을 상세히 분석해 드릴게요!"
     }]
 
-# 이전 메시지 출력
-ui_components.display_chat_messages(st.session_state["messages"])
+# 탭 구성
+tab_chat, tab_bmc = st.tabs(["💬 채팅 분석", "📋 원클릭 비즈니스 캔버스"])
 
-col1, col2 = st.columns(2)
-with col1:
-    with st.popover("📁 이미지", use_container_width=True):
-        uploaded_file = st.file_uploader("이미지를 드래그하거나 선택하세요", type=["png", "jpg", "jpeg"], key="chat_image_uploader")
-with col2:
-    with st.popover("📄 파일", use_container_width=True):
-        uploaded_doc = st.file_uploader("파일을 선택하세요", type=["pdf", "csv", "xlsx"], key="chat_file_uploader")
-
-# 사용자 입력 처리
-if prompt := st.chat_input("무엇이든 물어보세요"):
-    if not openai_api_key:
-        st.info("Please add your OpenAI API key to continue.")
-        st.stop()
-
-    client = OpenAI(api_key=openai_api_key)
-
-    # 메시지 내용 구성
-    message_content = []
+with tab_chat:
+    # 이전 메시지 출력
+    ui_components.display_chat_messages(st.session_state["messages"])
     
-    # 텍스트 추가
-    message_content.append({"type": "text", "text": prompt})
-    
-    # 이미지 처리
-    if uploaded_file:
-        # 이미지를 base64로 인코딩
-        image_bytes = uploaded_file.getvalue()
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
-        
-        # 이미지 추가
-        message_content.append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:image/jpeg;base64,{base64_image}"
-            }
-        })
-        
-        # UI에 이미지 표시 (사용자 메시지)
-        with st.chat_message("user"):
-            st.image(uploaded_file)
+    col1, col2 = st.columns(2)
+    with col1:
+        with st.popover("📁 이미지", use_container_width=True):
+            uploaded_file = st.file_uploader("이미지를 드래그하거나 선택하세요", type=["png", "jpg", "jpeg"], key="chat_image_uploader")
+    with col2:
+        with st.popover("📄 파일", use_container_width=True):
+            uploaded_doc = st.file_uploader("파일을 선택하세요", type=["pdf", "csv", "xlsx"], key="chat_file_uploader")
 
-    # 파일 처리
-    if uploaded_doc:
-        file_text = ""
-        try:
-            if uploaded_doc.type == "application/pdf":
-                reader = PdfReader(uploaded_doc)
-                max_pages = 5
-                for i, page in enumerate(reader.pages):
-                    if i >= max_pages:
-                        file_text += f"\n\n[...내용이 너무 길어 {max_pages}페이지만 표시합니다...]"
-                        break
-                    file_text += page.extract_text() + "\n"
-            elif uploaded_doc.type == "text/csv":
-                try:
-                    df = pd.read_csv(uploaded_doc)
-                except UnicodeDecodeError:
-                    # UTF-8 실패 시 CP949(한글)로 재시도
-                    uploaded_doc.seek(0)
-                    df = pd.read_csv(uploaded_doc, encoding='cp949')
-                
-                if len(df) > 50:
-                    file_text = f"⚠️ 데이터가 너무 많아 상위 50행만 분석에 사용합니다 (총 {len(df)}행).\n"
-                    file_text += df.head(50).to_markdown(index=False)
-                else:
-                    file_text = df.to_markdown(index=False)
-            elif "excel" in uploaded_doc.type or uploaded_doc.name.endswith(".xlsx"):
-                df = pd.read_excel(uploaded_doc)
-                if len(df) > 50:
-                    file_text = f"⚠️ 데이터가 너무 많아 상위 50행만 분석에 사용합니다 (총 {len(df)}행).\n"
-                    file_text += df.head(50).to_markdown(index=False)
-                else:
-                    file_text = df.to_markdown(index=False)
+    # 사용자 입력 처리
+    if prompt := st.chat_input("무엇이든 물어보세요"):
+        if not openai_api_key:
+            st.info("Please add your OpenAI API key to continue.")
+            st.stop()
+
+        client = OpenAI(api_key=openai_api_key)
+
+        # 메시지 내용 구성
+        message_content = []
+        
+        # 텍스트 추가
+        message_content.append({"type": "text", "text": prompt})
+        
+        # 이미지 처리
+        if uploaded_file:
+            # 이미지를 base64로 인코딩
+            image_bytes = uploaded_file.getvalue()
+            base64_image = base64.b64encode(image_bytes).decode('utf-8')
             
-            if file_text:
-                # 텍스트 내용에 파일 내용 추가
-                message_content[0]["text"] += f"\n\n[첨부 파일 내용 ({uploaded_doc.name})]:\n{file_text}"
+            # 이미지 추가
+            message_content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{base64_image}"
+                }
+            })
+            
+            # UI에 이미지 표시 (사용자 메시지)
+            with st.chat_message("user"):
+                st.image(uploaded_file)
+
+        # 파일 처리
+        if uploaded_doc:
+            file_text = ""
+            try:
+                if uploaded_doc.type == "application/pdf":
+                    reader = PdfReader(uploaded_doc)
+                    max_pages = 5
+                    for i, page in enumerate(reader.pages):
+                        if i >= max_pages:
+                            file_text += f"\n\n[...내용이 너무 길어 {max_pages}페이지만 표시합니다...]"
+                            break
+                        file_text += page.extract_text() + "\n"
+                elif uploaded_doc.type == "text/csv":
+                    try:
+                        df = pd.read_csv(uploaded_doc)
+                    except UnicodeDecodeError:
+                        # UTF-8 실패 시 CP949(한글)로 재시도
+                        uploaded_doc.seek(0)
+                        df = pd.read_csv(uploaded_doc, encoding='cp949')
+                    
+                    if len(df) > 50:
+                        file_text = f"⚠️ 데이터가 너무 많아 상위 50행만 분석에 사용합니다 (총 {len(df)}행).\n"
+                        file_text += df.head(50).to_markdown(index=False)
+                    else:
+                        file_text = df.to_markdown(index=False)
+                elif "excel" in uploaded_doc.type or uploaded_doc.name.endswith(".xlsx"):
+                    df = pd.read_excel(uploaded_doc)
+                    if len(df) > 50:
+                        file_text = f"⚠️ 데이터가 너무 많아 상위 50행만 분석에 사용합니다 (총 {len(df)}행).\n"
+                        file_text += df.head(50).to_markdown(index=False)
+                    else:
+                        file_text = df.to_markdown(index=False)
                 
-                # UI에 파일 첨부 표시
-                with st.chat_message("user"):
-                    st.caption(f"📎 파일 첨부: {uploaded_doc.name}")
-                    if "⚠️" in file_text:
-                        st.caption("※ 토큰 제한으로 인해 데이터 일부만 전송되었습니다.")
+                if file_text:
+                    # 텍스트 내용에 파일 내용 추가
+                    message_content[0]["text"] += f"\n\n[첨부 파일 내용 ({uploaded_doc.name})]:\n{file_text}"
+                    
+                    # UI에 파일 첨부 표시
+                    with st.chat_message("user"):
+                        st.caption(f"📎 파일 첨부: {uploaded_doc.name}")
+                        if "⚠️" in file_text:
+                            st.caption("※ 토큰 제한으로 인해 데이터 일부만 전송되었습니다.")
+            except Exception as e:
+                st.error(f"파일 처리 중 오류 발생: {e}")
+
+        # 세션 상태에 메시지 추가 (OpenAI API 형식에 맞게)
+        # 텍스트만 있는 경우와 이미지 포함된 경우 구분 없이 리스트 형태로 저장해도 됨
+        # 하지만 기존 텍스트만 있는 경우와의 호환성을 위해 텍스트만 있으면 문자열로 저장할 수도 있으나,
+        # 일관성을 위해 리스트로 저장하거나, ui_components에서 처리했으므로 리스트로 저장.
+        
+        # 다만, 기존 로직이 문자열을 기대하는 부분이 있을 수 있으므로 확인 필요.
+        # ui_components.display_chat_messages는 리스트/문자열 모두 처리하도록 수정함.
+        # chat_service.get_ai_response는 messages 리스트를 그대로 전달하므로 문제 없음.
+        
+        # 사용자 메시지 UI 표시 (텍스트) - 이미지는 위에서 표시함
+        with st.chat_message("user"):
+            st.write(prompt)
+
+        # 세션에 저장할 메시지 객체
+        # 주의: OpenAI API는 content가 string 또는 list of content parts일 수 있음.
+        # 복잡성을 줄이기 위해 이미지가 없으면 그냥 string으로, 있으면 list로 저장.
+        if uploaded_file:
+            user_msg_obj = {"role": "user", "content": message_content}
+        else:
+            # 이미지가 없더라도 파일이 첨부되었을 수 있으므로 message_content의 텍스트를 사용
+            user_msg_obj = {"role": "user", "content": message_content[0]["text"]}
+
+        st.session_state["messages"].append(user_msg_obj)
+
+        try:
+            # MongoDB에는 구조화된 데이터를 저장해야 나중에 복원 시 문제 없음
+            # 현재 사용자 정보 (게스트 포함)
+            user_data = {
+                "email": current_user_id,
+                "name": current_user_name
+            }
+            
+            # 세션 ID가 없으면 새로 생성 (첫 메시지인 경우)
+            if st.session_state["session_id"] is None:
+                # 제목 생성 (첫 메시지 내용으로)
+                title = prompt[:30] + "..." if len(prompt) > 30 else prompt
+                st.session_state["session_id"] = db_service.create_chat_session(chat_collection, current_user_id, title)
+
+            db_service.log_chat_message(chat_collection, "user", user_msg_obj["content"], user_data, st.session_state["session_id"])
         except Exception as e:
-            st.error(f"파일 처리 중 오류 발생: {e}")
+            # DB 저장 실패는 사용자에게 치명적이지 않으므로 경고만 표시하거나 로그로 남김
+            print(f"메시지 저장 실패: {str(e)}")
+            # st.warning("채팅 기록 저장에 실패했습니다. (네트워크 연결 확인 필요)")
 
-    # 세션 상태에 메시지 추가 (OpenAI API 형식에 맞게)
-    # 텍스트만 있는 경우와 이미지 포함된 경우 구분 없이 리스트 형태로 저장해도 됨
-    # 하지만 기존 텍스트만 있는 경우와의 호환성을 위해 텍스트만 있으면 문자열로 저장할 수도 있으나,
-    # 일관성을 위해 리스트로 저장하거나, ui_components에서 처리했으므로 리스트로 저장.
-    
-    # 다만, 기존 로직이 문자열을 기대하는 부분이 있을 수 있으므로 확인 필요.
-    # ui_components.display_chat_messages는 리스트/문자열 모두 처리하도록 수정함.
-    # chat_service.get_ai_response는 messages 리스트를 그대로 전달하므로 문제 없음.
-    
-    # 사용자 메시지 UI 표시 (텍스트) - 이미지는 위에서 표시함
-    with st.chat_message("user"):
-        st.write(prompt)
-
-    # 세션에 저장할 메시지 객체
-    # 주의: OpenAI API는 content가 string 또는 list of content parts일 수 있음.
-    # 복잡성을 줄이기 위해 이미지가 없으면 그냥 string으로, 있으면 list로 저장.
-    if uploaded_file:
-        user_msg_obj = {"role": "user", "content": message_content}
-    else:
-        # 이미지가 없더라도 파일이 첨부되었을 수 있으므로 message_content의 텍스트를 사용
-        user_msg_obj = {"role": "user", "content": message_content[0]["text"]}
-
-    st.session_state["messages"].append(user_msg_obj)
-
-    try:
-        # MongoDB에는 구조화된 데이터를 저장해야 나중에 복원 시 문제 없음
-        # 현재 사용자 정보 (게스트 포함)
-        user_data = {
-            "email": current_user_id,
-            "name": current_user_name
-        }
+        # AI 응답
+        try:
+            with st.spinner("분석 중입니다... 잠시만 기다려주세요..."):
+                persona = st.session_state.get("current_persona", "general")
+                msg = chat_service.get_ai_response(client, st.session_state["messages"], persona=persona)
+        except Exception as e:
+            st.error(f"AI 응답 생성 실패: {str(e)}")
+            st.stop()
         
-        # 세션 ID가 없으면 새로 생성 (첫 메시지인 경우)
-        if st.session_state["session_id"] is None:
-            # 제목 생성 (첫 메시지 내용으로)
-            title = prompt[:30] + "..." if len(prompt) > 30 else prompt
-            st.session_state["session_id"] = db_service.create_chat_session(chat_collection, current_user_id, title)
+        st.session_state["messages"].append({"role": "assistant", "content": msg})
+        with st.chat_message("assistant"):
+            st.write(msg)
+            
+            # 페르소나 표시 (피드백 용)
+            persona_labels = {
+                "general": "🧥 일반 컨설턴트",
+                "vc": "🦅 냉철한 VC",
+                "marketer": "📣 마케팅 전문가"
+            }
+            current_persona = st.session_state.get("current_persona", "general")
+            st.caption(f"Momentary Analysis by {persona_labels.get(current_persona, 'AI')}")
 
-        db_service.log_chat_message(chat_collection, "user", user_msg_obj["content"], user_data, st.session_state["session_id"])
-    except Exception as e:
-        # DB 저장 실패는 사용자에게 치명적이지 않으므로 경고만 표시하거나 로그로 남김
-        print(f"메시지 저장 실패: {str(e)}")
-        # st.warning("채팅 기록 저장에 실패했습니다. (네트워크 연결 확인 필요)")
+        try:
+            db_service.log_chat_message(chat_collection, "assistant", msg, user_data, st.session_state["session_id"])
+        except Exception as e:
+            print(f"AI 응답 저장 실패: {str(e)}")
 
-    # AI 응답
-    try:
-        with st.spinner("분석 중입니다... 잠시만 기다려주세요..."):
-            persona = st.session_state.get("current_persona", "general")
-            msg = chat_service.get_ai_response(client, st.session_state["messages"], persona=persona)
-    except Exception as e:
-        st.error(f"AI 응답 생성 실패: {str(e)}")
-        st.stop()
+
+# BMC 탭 내용
+with tab_bmc:
+    st.markdown("### 📋 비즈니스 모델 캔버스 (Business Model Canvas)")
+    st.markdown("지금까지 나누었던 대화 내용을 바탕으로 **사업의 핵심 9가지 요소**를 정리해드립니다. 투자 유치나 사업 계획서 작성 시 활용하세요!")
     
-    st.session_state["messages"].append({"role": "assistant", "content": msg})
-    with st.chat_message("assistant"):
-        st.write(msg)
-        
-        # 페르소나 표시 (피드백 용)
-        persona_labels = {
-            "general": "🧥 일반 컨설턴트",
-            "vc": "🦅 냉철한 VC",
-            "marketer": "📣 마케팅 전문가"
-        }
-        current_persona = st.session_state.get("current_persona", "general")
-        st.caption(f"Momentary Analysis by {persona_labels.get(current_persona, 'AI')}")
-
-    try:
-        db_service.log_chat_message(chat_collection, "assistant", msg, user_data, st.session_state["session_id"])
-    except Exception as e:
-        print(f"AI 응답 저장 실패: {str(e)}")
-
+    if st.button("🚀 원클릭 BMC 생성하기", key="generate_bmc_btn", type="primary", use_container_width=True):
+        if not openai_api_key:
+            st.info("Please add your OpenAI API key to continue.")
+        elif not st.session_state["messages"] or len(st.session_state["messages"]) < 2:
+            st.warning("⚠️ 먼저 채팅으로 아이템에 대해 충분히 이야기를 나누어 주세요.")
+        else:
+            client = OpenAI(api_key=openai_api_key)
+            try:
+                with st.spinner("대화 내용을 분석하여 비즈니스 캔버스를 그리고 있습니다..."):
+                    bmc_content = chat_service.generate_bmc(client, st.session_state["messages"])
+                
+                st.success("✅ 비즈니스 캔버스 생성이 완료되었습니다!")
+                
+                # 결과를 박스 안에 예쁘게 표시
+                with st.container(border=True):
+                    st.markdown(bmc_content)
+                
+                # 다운로드 버튼 (텍스트 파일)
+                st.download_button(
+                    label="📥 캔버스 내용 다운로드 (Markdown)",
+                    data=bmc_content,
+                    file_name=f"BMC_Analysis_{st.session_state.get('guest_id', 'user')}.md",
+                    mime="text/markdown"
+                )
+                
+            except Exception as e:
+                st.error(f"BMC 생성 중 오류 발: {str(e)}")
