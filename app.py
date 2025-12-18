@@ -358,6 +358,15 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
     st.session_state["messages"].append({"role": "assistant", "content": msg})
     with st.chat_message("assistant"):
         st.write(msg)
+        
+        # 페르소나 표시 (피드백 용)
+        persona_labels = {
+            "general": "🧥 일반 컨설턴트",
+            "vc": "🦅 냉철한 VC",
+            "marketer": "📣 마케팅 전문가"
+        }
+        current_persona = st.session_state.get("current_persona", "general")
+        st.caption(f"Momentary Analysis by {persona_labels.get(current_persona, 'AI')}")
 
     try:
         db_service.log_chat_message(chat_collection, "assistant", msg, user_data, st.session_state["session_id"])
