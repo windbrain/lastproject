@@ -200,7 +200,7 @@ def render_sidebar(sessions=None, on_session_select=None, on_new_chat=None, on_d
 
         st.markdown("---")
         # st.title("Poten.Ai") # 상단으로 이동
-        st.markdown("[테스트1](https://www.naver.com/)")
+     
 
 def render_header():
     st.markdown("""
