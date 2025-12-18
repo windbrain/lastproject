@@ -14,6 +14,7 @@ from pypdf import PdfReader
 import io
 
 import platform
+import uuid
 
 # 환경 변수 로드
 # 환경 변수 로드 및 공백 제거 (복사/붙여넣기 실수 방지)
@@ -85,10 +86,31 @@ def on_delete_session(session_id):
 if "session_id" not in st.session_state:
     st.session_state["session_id"] = None
 
-# 사용자 세션 목록 가져오기 (로그인 상태일 때만)
-sessions = []
+
+
+# --- 사용자 식별 (로그인 vs 게스트) ---
 if "user_info" in st.session_state:
-    sessions = db_service.get_user_sessions(chat_collection, st.session_state["user_info"]["email"])
+    # 로그인 사용자
+    current_user_id = st.session_state["user_info"]["email"]
+    current_user_name = st.session_state["user_info"]["name"]
+    is_guest = False
+else:
+    # 게스트 처리
+    if "guest_id" not in st.session_state:
+        # URL에 guest_id가 있으면 사용, 없으면 새로 생성
+        if "guest_id" in st.query_params:
+            st.session_state["guest_id"] = st.query_params["guest_id"]
+        else:
+            st.session_state["guest_id"] = str(uuid.uuid4())[:8]
+            st.query_params["guest_id"] = st.session_state["guest_id"]
+    
+    current_user_id = st.session_state["guest_id"]
+    current_user_name = "게스트"
+    is_guest = True
+
+# --- 사이드바 및 세션 관리 ---
+# 사용자 세션 목록 가져오기 (로그인 또는 게스트 모두)
+sessions = db_service.get_user_sessions(chat_collection, current_user_id)
 
 # 사이드바 렌더링
 ui_components.render_sidebar(sessions, on_session_select, on_new_chat, on_delete_session)
@@ -304,20 +326,21 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
 
     st.session_state["messages"].append(user_msg_obj)
 
-    # MongoDB 저장
-    user = st.session_state.get("user_info", {"email": "anonymous", "name": "익명"})
-    
-    # 세션 ID가 없으면 새로 생성 (첫 메시지인 경우)
-    if st.session_state["session_id"] is None and "user_info" in st.session_state:
-        # 제목 생성 (첫 메시지 내용으로)
-        title = prompt[:30] + "..." if len(prompt) > 30 else prompt
-        st.session_state["session_id"] = db_service.create_chat_session(chat_collection, user["email"], title)
-        # 사이드바 갱신을 위해 rerun 필요할 수 있음 (하지만 메시지 처리 후 자연스럽게 갱신될 것)
-        
     try:
         # MongoDB에는 구조화된 데이터를 저장해야 나중에 복원 시 문제 없음
-        # db_service.log_chat_message는 content를 그대로 저장한다고 가정
-        db_service.log_chat_message(chat_collection, "user", user_msg_obj["content"], user, st.session_state["session_id"])
+        # 현재 사용자 정보 (게스트 포함)
+        user_data = {
+            "email": current_user_id,
+            "name": current_user_name
+        }
+        
+        # 세션 ID가 없으면 새로 생성 (첫 메시지인 경우)
+        if st.session_state["session_id"] is None:
+            # 제목 생성 (첫 메시지 내용으로)
+            title = prompt[:30] + "..." if len(prompt) > 30 else prompt
+            st.session_state["session_id"] = db_service.create_chat_session(chat_collection, current_user_id, title)
+
+        db_service.log_chat_message(chat_collection, "user", user_msg_obj["content"], user_data, st.session_state["session_id"])
     except Exception as e:
         # DB 저장 실패는 사용자에게 치명적이지 않으므로 경고만 표시하거나 로그로 남김
         print(f"메시지 저장 실패: {str(e)}")
@@ -336,7 +359,7 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
         st.write(msg)
 
     try:
-        db_service.log_chat_message(chat_collection, "assistant", msg, user, st.session_state["session_id"])
+        db_service.log_chat_message(chat_collection, "assistant", msg, user_data, st.session_state["session_id"])
     except Exception as e:
         print(f"AI 응답 저장 실패: {str(e)}")
 
