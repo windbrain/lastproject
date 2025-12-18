@@ -349,7 +349,8 @@ if prompt := st.chat_input("무엇이든 물어보세요"):
     # AI 응답
     try:
         with st.spinner("분석 중입니다... 잠시만 기다려주세요..."):
-            msg = chat_service.get_ai_response(client, st.session_state["messages"])
+            persona = st.session_state.get("current_persona", "general")
+            msg = chat_service.get_ai_response(client, st.session_state["messages"], persona=persona)
     except Exception as e:
         st.error(f"AI 응답 생성 실패: {str(e)}")
         st.stop()

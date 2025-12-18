@@ -14,9 +14,39 @@ SYSTEM_PROMPT = """
 말투는 전문적이면서도 격려하는 '해요체'를 사용하세요.
 """
 
-def get_ai_response(client, messages, model="gpt-4o"):
+def get_ai_response(client, messages, persona="general", model="gpt-4o"):
+    # 페르소나별 추가 프롬프트 설정
+    persona_prompts = {
+        "general": """
+        당신의 역할: 균형 잡힌 시각을 가진 '전문 창업 컨설턴트'입니다.
+        톤앤매너: 전문적이고 격려하는, 정중한 해요체.
+        추가 요청: 전반적인 사업 타당성을 골고루 분석해주세요.
+        """,
+        "vc": """
+        당신의 역할: 냉철하고 비판적인 '벤처 캐피탈리스트(VC)'입니다.
+        톤앤매너: 직설적이고 날카로운, 팩트 중심의 해요체. (빈말은 하지 않음)
+        추가 요청: 
+        - 수익 모델과 시장 규모(TAM/SAM/SOM)를 집중적으로 파고드세요.
+        - 예상되는 리스크를 집요하게 지적하세요.
+        - 마지막에 💰 **투자 매력도 점수 (0~100점)**와 그 이유를 한 줄로 평가하세요.
+        """,
+        "marketer": """
+        당신의 역할: 트렌드에 민감한 '바이럴 마케팅 전문가'입니다.
+        톤앤매너: 활기차고 통통 튀는, 에너지 넘치는 해요체.
+        추가 요청: 
+        - 타겟 고객의 니즈와 바이럴 포인트(Hook)를 집중적으로 발굴하세요.
+        - 경쟁사와 차별화된 브랜딩 전략을 제안하세요.
+        - 마지막에 🔥 **시장광/바이럴 점수 (0~100점)**와 그 이유를 한 줄로 평가하세요.
+        """
+    }
+
+    selected_prompt = persona_prompts.get(persona, persona_prompts["general"])
+    
+    # 기본 시스템 프롬프트와 결합
+    full_system_prompt = f"{SYSTEM_PROMPT}\n\n[현재 적용된 분석가 페르소나]\n{selected_prompt}"
+
     # 시스템 프롬프트 추가
-    messages_with_system = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
+    messages_with_system = [{"role": "system", "content": full_system_prompt}] + messages
     
     response = client.chat.completions.create(
         model=model,

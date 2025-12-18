@@ -176,6 +176,23 @@ def render_sidebar(sessions=None, on_session_select=None, on_new_chat=None, on_d
                 on_new_chat()
         
         st.markdown("---")
+
+        # 분석가 페르소나 선택
+        st.subheader("🕵️ 분석가 선택")
+        persona_map = {
+            "🧥 일반 컨설턴트 (밸런스)": "general",
+            "🦅 냉철한 VC (비판적/수익)": "vc",
+            "📣 마케팅 전문가 (트렌드)": "marketer"
+        }
+        selected_persona_name = st.selectbox(
+            "누구에게 평가받으시겠어요?",
+            list(persona_map.keys()),
+            key="selected_persona_ui"
+        )
+        # 선택된 페르소나 코드 반환 (세션 상태 등 외부에서 사용 가능하도록)
+        st.session_state["current_persona"] = persona_map[selected_persona_name]
+        
+        st.markdown("---")
         
         # 채팅 기록 목록
         if sessions:
