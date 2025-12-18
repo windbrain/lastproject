@@ -53,3 +53,36 @@ def get_ai_response(client, messages, persona="general", model="gpt-4o"):
         messages=messages_with_system
     )
     return response.choices[0].message.content
+
+def generate_bmc(client, messages, model="gpt-4o"):
+    """
+    현재 대화 기록을 바탕으로 비즈니스 모델 캔버스(BMC)를 작성합니다.
+    """
+    bmc_system_prompt = """
+    당신은 스타트업 비즈니스 모델 분석가입니다.
+    지금까지의 대화 내용을 바탕으로 '비즈니스 모델 캔버스(Business Model Canvas)'의 9가지 요소를 정리해 주세요.
+    
+    다음 형식의 Markdown 표로 출력하세요:
+    
+    | 구분 | 내용 |
+    |---|---|
+    | 🤝 핵심 파트너 (Key Partners) | ... |
+    | 🔑 핵심 활동 (Key Activities) | ... |
+    | 💎 핵심 자원 (Key Resources) | ... |
+    | 🎁 가치 제안 (Value Propositions) | ... |
+    | 🗣️ 고객 관계 (Customer Relationships) | ... |
+    | 🚚 채널 (Channels) | ... |
+    | 👥 고객 세그먼트 (Customer Segments) | ... |
+    | 💰 비용 구조 (Cost Structure) | ... |
+    | 💵 수익원 (Revenue Streams) | ... |
+
+    각 항목은 핵심만 요약해서 작성하세요.
+    """
+    
+    messages_with_system = [{"role": "system", "content": bmc_system_prompt}] + messages
+    
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages_with_system
+    )
+    return response.choices[0].message.content
