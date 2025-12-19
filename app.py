@@ -310,8 +310,23 @@ with tab_bmc:
             try:
                 with st.spinner("대화 내용을 분석하여 비즈니스 캔버스를 그리고 있습니다..."):
                     bmc_json_str = chat_service.generate_bmc(client, st.session_state["messages"])
+                    
+                    # 디버깅: 원본 응답 확인 (필요 시 주석 해제)
+                    # st.write(f"Debug Raw: {bmc_json_str}")
+                    
+                    # JSON 파싱 전처리: 마크다운 코드 블록 제거
+                    if bmc_json_str.startswith("```json"):
+                        bmc_json_str = bmc_json_str.replace("```json", "").replace("```", "")
+                    elif bmc_json_str.startswith("```"):
+                        bmc_json_str = bmc_json_str.replace("```", "")
+                    
                     import json
-                    bmc_data = json.loads(bmc_json_str)
+                    try:
+                        bmc_data = json.loads(bmc_json_str)
+                    except json.JSONDecodeError:
+                        # 재시도 또는 에러 메시지 상세화
+                        st.error(f"JSON 파싱 실패. 원본 데이터: {bmc_json_str[:100]}...")
+                        st.stop()
                 
                 st.success("✅ 비즈니스 캔버스 생성이 완료되었습니다!")
                 
