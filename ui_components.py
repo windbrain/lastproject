@@ -405,6 +405,19 @@ def render_panel_discussion(discussion_data):
         "Moderator": "panel-mod"
     }
 
+    for item in discussion_data:
+        speaker = item.get("speaker", "Moderator")
+        message = item.get("message", "")
+        
+        # Mapping variations
+        style_key = "Moderator"
+        if "VC" in speaker or "Capital" in speaker: style_key = "VC"
+        elif "Market" in speaker or "마케터" in speaker: style_key = "Marketer"
+        elif "CTO" in speaker or "기술" in speaker or "Tech" in speaker: style_key = "CTO"
+        
+        emoji = avatars.get(style_key, "👤")
+        css_class = styles.get(style_key, "panel-mod")
+        
         st.markdown(f"""
         <div class="panel-box {css_class}">
             <div class="speaker-name">{emoji} {speaker}</div>
