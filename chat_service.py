@@ -92,12 +92,12 @@ def analyze_ratings(client, messages, model="gpt-4o"):
 
     반드시 아래 JSON 포맷으로 출력하세요 (Markdown 없이):
     {
-        "marketability": 80,
-        "profitability": 70,
-        "innovation": 85,
-        "feasibility": 90,
-        "growth_potential": 75,
-        "comment": "한 줄 총평..."
+        "discussion": [
+            {"speaker": "VC", "message": "이거 수익 모델이..."},
+            {"speaker": "Marketer", "message": "에이, 요즘은..."},
+            {"speaker": "CTO", "message": "기술적으로는..."},
+            {"speaker": "Moderator", "message": "종합해보면..."}
+        ]
     }
     """
     

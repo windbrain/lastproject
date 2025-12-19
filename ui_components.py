@@ -347,3 +347,67 @@ def render_radar_chart(scores):
     ax.patch.set_alpha(0.0)
     
     st.pyplot(fig)
+
+def render_panel_discussion(discussion_data):
+    st.markdown("""
+    <style>
+    .panel-box {
+        padding: 15px;
+        border-radius: 15px;
+        margin-bottom: 10px;
+        max-width: 85%;
+        position: relative;
+    }
+    .panel-vc {
+        background-color: #fce4ec; /* Red-ish for critic */
+        border-left: 5px solid #d81b60;
+        margin-right: auto;
+    }
+    .panel-marketer {
+        background-color: #fff3e0; /* Orange for energy */
+        border-left: 5px solid #fb8c00;
+        margin-left: auto;
+    }
+    .panel-cto {
+        background-color: #e3f2fd; /* Blue for tech */
+        border-left: 5px solid #1e88e5;
+        margin-right: auto;
+    }
+    .panel-mod {
+        background-color: #f3e5f5; /* Purple for neutral */
+        border: 2px dashed #8e24aa;
+        margin: 0 auto;
+        width: 100%;
+        text-align: center;
+    }
+    .speaker-name {
+        font-weight: bold;
+        font-size: 0.9em;
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    avatars = {
+        "VC": "🦅",
+        "Marketer": "📣",
+        "CTO": "💻",
+        "Moderator": "🎙️"
+    }
+    
+    styles = {
+        "VC": "panel-vc",
+        "Marketer": "panel-marketer",
+        "CTO": "panel-cto",
+        "Moderator": "panel-mod"
+    }
+
+        st.markdown(f"""
+        <div class="panel-box {css_class}">
+            <div class="speaker-name">{emoji} {speaker}</div>
+            <div>{message}</div>
+        </div>
+        """, unsafe_allow_html=True)

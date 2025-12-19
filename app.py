@@ -168,7 +168,7 @@ if "messages" not in st.session_state:
         "content": "안녕하세요! 예비 창업자님. 💡 **창업 아이템**을 알려주시면 **잠재 고객**, **시장 전망**, **SWOT**, **성공 전략**을 상세히 분석해 드릴게요!"
     }]
 
-tab_chat, tab_bmc = st.tabs(["💬 채팅 분석", "📋 원클릭 비즈니스 캔버스"])
+tab_chat, tab_bmc, tab_panel = st.tabs(["💬 채팅 분석", "📋 원클릭 BMC & 진단", "👥 가상 자문단 회의"])
 
 with tab_chat:
     ui_components.display_chat_messages(st.session_state["messages"])
@@ -295,6 +295,7 @@ with tab_chat:
             db_service.log_chat_message(chat_collection, "assistant", msg, user_data, st.session_state["session_id"])
         except Exception as e:
             print(f"AI 응답 저장 실패: {str(e)}")
+
 # BMC 및 진단 탭 내용
 with tab_bmc:
     st.markdown("### 📊 스타트업 진단 및 모델링")
@@ -399,3 +400,35 @@ with tab_bmc:
             use_container_width=True
         )
 
+# 가상 자문단 탭 내용
+with tab_panel:
+    st.markdown("### 👥 가상 자문단 회의 (Virtual Advisory Board)")
+    st.markdown("내 창업 아이템을 두고 **VC(투자자)**, **마케터**, **CTO(기술책임자)**가 벌이는 **끝장 토론**을 엿보세요.")
+    
+    if st.button("🔥 자문단 회의 소집하기", key="start_panel_btn", type="primary", use_container_width=True):
+        if not st.session_state["messages"] or len(st.session_state["messages"]) < 2:
+            st.warning("⚠️ 먼저 채팅으로 아이템에 대해 충분히 이야기를 나누어 주세요.")
+        else:
+            client = OpenAI(api_key=openai_api_key)
+            try:
+                with st.spinner("전문가들을 소집하고 있습니다... (약 10~20초 소요)"):
+                    panel_json_str = chat_service.generate_panel_discussion(client, st.session_state["messages"])
+                    
+                    if panel_json_str.startswith("```json"):
+                        panel_json_str = panel_json_str.replace("```json", "").replace("```", "")
+                    elif panel_json_str.startswith("```"):
+                        panel_json_str = panel_json_str.replace("```", "")
+                    
+                    import json
+                    panel_data_obj = json.loads(panel_json_str)
+                    # "discussion" 키 유무 확인 (프롬프트에 따라 최상위 리스트일수도, 객체일수도 있음. 프롬프트는 객체로 수정함)
+                    discussion_list = panel_data_obj.get("discussion", [])
+                
+                st.success("회의가 시작됩니다!")
+                st.markdown("---")
+                
+                # 렌더링
+                ui_components.render_panel_discussion(discussion_list)
+                
+            except Exception as e:
+                st.error(f"회의 생성 중 오류 발생: {str(e)}")
