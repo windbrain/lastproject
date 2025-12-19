@@ -1,4 +1,6 @@
 import streamlit as st
+import matplotlib.pyplot as plt
+import numpy as np
 
 def render_custom_css():
     st.markdown("""
@@ -304,3 +306,44 @@ def render_bmc_visual(bmc_data):
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
+
+def render_radar_chart(scores):
+    # 한글 폰트 설정 (Windows/Linux/Mac 대응 필요, 일단 기본 폰트 사용하거나 영문으로)
+    # Streamlit Cloud 등에서는 한글 폰트가 없을 수 있음.
+    # 안전하게 영문 라벨 사용하거나, 사용자가 설치한 폰트를 찾도록 해야 함.
+    # 여기서는 간단히 구현.
+    
+    labels = ['Marketability', 'Profitability', 'Innovation', 'Feasibility', 'Growth']
+    # 점수 순서 맞추기
+    values = [
+        scores.get('marketability', 0),
+        scores.get('profitability', 0),
+        scores.get('innovation', 0),
+        scores.get('feasibility', 0),
+        scores.get('growth_potential', 0)
+    ]
+    
+    # 레이더 차트 그리기
+    angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+    
+    # 닫힌 도형을 위해 첫 번째 값을 마지막에 추가
+    values += values[:1]
+    angles += angles[:1]
+    
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+    
+    ax.fill(angles, values, color='#10a37f', alpha=0.25)
+    ax.plot(angles, values, color='#10a37f', linewidth=2)
+    
+    ax.set_yticklabels([])
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels, fontsize=12, fontweight='bold')
+    
+    # 0~100 범위 고정
+    ax.set_ylim(0, 100)
+    
+    # 차트 배경 투명
+    fig.patch.set_alpha(0.0)
+    ax.patch.set_alpha(0.0)
+    
+    st.pyplot(fig)

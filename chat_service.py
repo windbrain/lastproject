@@ -77,3 +77,35 @@ def generate_bmc(client, messages, model="gpt-4o"):
         response_format={"type": "json_object"}
     )
     return response.choices[0].message.content
+
+def analyze_ratings(client, messages, model="gpt-4o"):
+    rating_system_prompt = """
+    당신은 스타트업 평가 위원입니다.
+    지금까지의 대화 내용을 바탕으로 다음 5가지 항목에 대해 0~100점 사이의 점수를 매겨주세요.
+    
+    평가 항목:
+    1. 시장성 (Marketability): 시장의 크기 및 수요
+    2. 수익성 (Profitability): BM의 타당성 및 수익 창출 능력
+    3. 혁신성 (Innovation): 기존 솔루션 대비 차별점
+    4. 실행 가능성 (Feasibility): 팀 역량 및 기술적 구현 가능성
+    5. 성장 잠재력 (Growth Potential): 스케일업 가능성
+
+    반드시 아래 JSON 포맷으로 출력하세요 (Markdown 없이):
+    {
+        "marketability": 80,
+        "profitability": 70,
+        "innovation": 85,
+        "feasibility": 90,
+        "growth_potential": 75,
+        "comment": "한 줄 총평..."
+    }
+    """
+    
+    messages_with_system = [{"role": "system", "content": rating_system_prompt}] + messages
+    
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages_with_system,
+        response_format={"type": "json_object"}
+    )
+    return response.choices[0].message.content

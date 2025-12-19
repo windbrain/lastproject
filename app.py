@@ -295,45 +295,88 @@ with tab_chat:
             db_service.log_chat_message(chat_collection, "assistant", msg, user_data, st.session_state["session_id"])
         except Exception as e:
             print(f"AI 응답 저장 실패: {str(e)}")
-
+# BMC 및 진단 탭 내용
 with tab_bmc:
-    st.markdown("### 📋 비즈니스 모델 캔버스 (Business Model Canvas)")
-    st.markdown("지금까지 나누었던 대화 내용을 바탕으로 **사업의 핵심 9가지 요소**를 정리해드립니다. 투자 유치나 사업 계획서 작성 시 활용하세요!")
+    st.markdown("### 📊 스타트업 진단 및 모델링")
+    st.markdown("AI가 당신의 사업 아이템을 **5가지 핵심 지표**로 분석하고, **비즈니스 모델 캔버스**를 그려줍니다.")
+
+    col1, col2 = st.columns(2)
     
-    if st.button("🚀 원클릭 BMC 생성하기", key="generate_bmc_btn", type="primary", use_container_width=True):
-        if not openai_api_key:
-            st.info("Please add your OpenAI API key to continue.")
-        elif not st.session_state["messages"] or len(st.session_state["messages"]) < 2:
-            st.warning("⚠️ 먼저 채팅으로 아이템에 대해 충분히 이야기를 나누어 주세요.")
-        else:
-            client = OpenAI(api_key=openai_api_key)
-            try:
-                with st.spinner("대화 내용을 분석하여 비즈니스 캔버스를 그리고 있습니다..."):
-                    bmc_json_str = chat_service.generate_bmc(client, st.session_state["messages"])
+    with col1:
+        st.markdown("#### 1. 🩺 아이템 건강검진 (Radar Chart)")
+        if st.button("📈 진단 차트 생성하기", key="generate_chart_btn", use_container_width=True):
+             if not st.session_state["messages"] or len(st.session_state["messages"]) < 2:
+                st.warning("⚠️ 먼저 채팅으로 아이템에 대해 충분히 이야기를 나누어 주세요.")
+             else:
+                client = OpenAI(api_key=openai_api_key)
+                try:
+                    with st.spinner("5가지 핵심 지표를 분석 중입니다..."):
+                        ratings_json = chat_service.analyze_ratings(client, st.session_state["messages"])
+                        # JSON 전처리
+                        if ratings_json.startswith("```json"):
+                            ratings_json = ratings_json.replace("```json", "").replace("```", "")
+                        elif ratings_json.startswith("```"):
+                            ratings_json = ratings_json.replace("```", "")
+                        
+                        import json
+                        scores = json.loads(ratings_json)
                     
-                    # 디버깅: 원본 응답 확인 (필요 시 주석 해제)
-                    # st.write(f"Debug Raw: {bmc_json_str}")
+                    st.success("진단 완료!")
+                    # 차트 렌더링
+                    ui_components.render_radar_chart(scores)
                     
-                    # JSON 파싱 전처리: 마크다운 코드 블록 제거
-                    if bmc_json_str.startswith("```json"):
-                        bmc_json_str = bmc_json_str.replace("```json", "").replace("```", "")
-                    elif bmc_json_str.startswith("```"):
-                        bmc_json_str = bmc_json_str.replace("```", "")
+                    # 총평 출력
+                    st.info(f"**총평**: {scores.get('comment', '')}")
                     
-                    import json
-                    try:
-                        bmc_data = json.loads(bmc_json_str)
-                    except json.JSONDecodeError:
-                        # 재시도 또는 에러 메시지 상세화
-                        st.error(f"JSON 파싱 실패. 원본 데이터: {bmc_json_str[:100]}...")
-                        st.stop()
-                
-                st.success("✅ 비즈니스 캔버스 생성이 완료되었습니다!")
-                
-                ui_components.render_bmc_visual(bmc_data)
-                
-                # 다운로드용 텍스트 변환
-                markdown_content = f"""
+                except Exception as e:
+                    st.error(f"진단 중 오류 발생: {str(e)}")
+
+    with col2:
+        st.markdown("#### 2. 📋 비즈니스 모델 캔버스 (BMC)")
+        if st.button("🚀 BMC 생성하기", key="generate_bmc_btn", type="primary", use_container_width=True):
+            if not openai_api_key:
+                st.info("Please add your OpenAI API key to continue.")
+            elif not st.session_state["messages"] or len(st.session_state["messages"]) < 2:
+                st.warning("⚠️ 먼저 채팅으로 아이템에 대해 충분히 이야기를 나누어 주세요.")
+            else:
+                client = OpenAI(api_key=openai_api_key)
+                try:
+                    with st.spinner("비즈니스 캔버스를 그리는 중..."):
+                        bmc_json_str = chat_service.generate_bmc(client, st.session_state["messages"])
+                        
+                        if bmc_json_str.startswith("```json"):
+                            bmc_json_str = bmc_json_str.replace("```json", "").replace("```", "")
+                        elif bmc_json_str.startswith("```"):
+                            bmc_json_str = bmc_json_str.replace("```", "")
+                        
+                        import json
+                        try:
+                            bmc_data = json.loads(bmc_json_str)
+                        except json.JSONDecodeError:
+                            st.error("데이터 파싱 실패. 다시 시도해주세요.")
+                            st.stop()
+                    
+                    st.success("생성 완료!")
+                    st.session_state["bmc_data"] = bmc_data # 임시 저장 (화면 리프레시 대응용)
+                    
+                except Exception as e:
+                    st.error(f"오류 발생: {str(e)}")
+
+    # BMC 결과가 있으면 하단에 표시 (버튼 클릭 후에도 유지되도록 세션 활용하면 좋지만 일단 직접 렌더링)
+    # 위 코드에서 bmc_data는 지역변수라 사라짐. 세션에 저장하는게 좋음.
+    # 간단히 구현하기 위해 바로 렌더링하도록 함. (다만 컬럼 밖으로 빼기 위해 로직 조정 필요)
+    
+    # 여기서는 간단히 버튼 누른 직후에만 표시 (Streamlit 특성상 리런되면 사라짐, 세션 저장 권장)
+    # 일단 직관성을 위해 col2 안이 아닌 아래 넓은 영역에 표시
+    
+    if "bmc_data" in st.session_state:
+        st.markdown("---")
+        st.markdown("#### 🏗️ 비즈니스 모델 캔버스 결과")
+        ui_components.render_bmc_visual(st.session_state["bmc_data"])
+        
+        # 다운로드 버튼 (Markdown)
+        bmc_data = st.session_state["bmc_data"]
+        markdown_content = f"""
 # Business Model Canvas
 
 | 구분 | 내용 |
@@ -348,13 +391,11 @@ with tab_bmc:
 | 💰 비용 구조 | {bmc_data.get('cost_structure')} |
 | 💵 수익원 | {bmc_data.get('revenue_streams')} |
 """
-                
-                st.download_button(
-                    label="📥 캔버스 내용 다운로드 (Markdown)",
-                    data=markdown_content,
-                    file_name=f"BMC_Analysis_{st.session_state.get('guest_id', 'user')}.md",
-                    mime="text/markdown"
-                )
-                
-            except Exception as e:
-                st.error(f"BMC 생성 중 오류 발생: {str(e)}")
+        st.download_button(
+            label="📥 Markdown 다운로드",
+            data=markdown_content,
+            file_name=f"BMC_{st.session_state.get('guest_id', 'user')}.md",
+            mime="text/markdown",
+            use_container_width=True
+        )
+
