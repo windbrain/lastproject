@@ -1,6 +1,3 @@
-# 이 파일은 OpenAI API를 사용하여 챗봇 응답을 생성하는 모듈입니다.
-
-# 분석 포맷 가이드 (공통)
 ANALYSIS_FORMAT = """
 [분석 가이드라인]
 사용자가 창업 아이템을 제시하면, 다음 4가지 항목에 맞춰 체계적으로 분석해 주세요.
@@ -15,7 +12,6 @@ ANALYSIS_FORMAT = """
 """
 
 def get_ai_response(client, messages, persona="general", model="gpt-4o"):
-    # 페르소나별 정체성 및 톤앤매너 설정
     persona_prompts = {
         "general": """
         당신은 균형 잡힌 시각을 가진 '전문 창업 컨설턴트'입니다.
@@ -42,10 +38,8 @@ def get_ai_response(client, messages, persona="general", model="gpt-4o"):
 
     selected_identity = persona_prompts.get(persona, persona_prompts["general"])
     
-    # 프롬프트 조합: 정체성(Identity) + 포맷(Format)
     full_system_prompt = f"{selected_identity}\n\n{ANALYSIS_FORMAT}"
 
-    # 시스템 프롬프트 추가
     messages_with_system = [{"role": "system", "content": full_system_prompt}] + messages
     
     response = client.chat.completions.create(
@@ -55,26 +49,22 @@ def get_ai_response(client, messages, persona="general", model="gpt-4o"):
     return response.choices[0].message.content
 
 def generate_bmc(client, messages, model="gpt-4o"):
-    """
-    현재 대화 기록을 바탕으로 비즈니스 모델 캔버스(BMC)를 작성합니다.
-    """
     bmc_system_prompt = """
     당신은 스타트업 비즈니스 모델 분석가입니다.
     지금까지의 대화 내용을 바탕으로 '비즈니스 모델 캔버스(Business Model Canvas)'의 9가지 요소를 정리해 주세요.
     
-    다음 형식의 Markdown 표로 출력하세요:
-    
-    | 구분 | 내용 |
-    |---|---|
-    | 🤝 핵심 파트너 (Key Partners) | ... |
-    | 🔑 핵심 활동 (Key Activities) | ... |
-    | 💎 핵심 자원 (Key Resources) | ... |
-    | 🎁 가치 제안 (Value Propositions) | ... |
-    | 🗣️ 고객 관계 (Customer Relationships) | ... |
-    | 🚚 채널 (Channels) | ... |
-    | 👥 고객 세그먼트 (Customer Segments) | ... |
-    | 💰 비용 구조 (Cost Structure) | ... |
-    | 💵 수익원 (Revenue Streams) | ... |
+     반드시 아래 JSON 포맷으로 출력해야 합니다 (Markdown 코드 블록 없이 순수 JSON만 출력):
+    {
+        "key_partners": "핵심 파트너 내용...",
+        "key_activities": "핵심 활동 내용...",
+        "key_resources": "핵심 자원 내용...",
+        "value_propositions": "가치 제안 내용...",
+        "customer_relationships": "고객 관계 내용...",
+        "channels": "채널 내용...",
+        "customer_segments": "고객 세그먼트 내용...",
+        "cost_structure": "비용 구조 내용...",
+        "revenue_streams": "수익원 내용..."
+    }
 
     각 항목은 핵심만 요약해서 작성하세요.
     """
@@ -83,6 +73,7 @@ def generate_bmc(client, messages, model="gpt-4o"):
     
     response = client.chat.completions.create(
         model=model,
-        messages=messages_with_system
+        messages=messages_with_system,
+        response_format={"type": "json_object"}
     )
     return response.choices[0].message.content
