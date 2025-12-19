@@ -92,16 +92,53 @@ def analyze_ratings(client, messages, model="gpt-4o"):
 
     반드시 아래 JSON 포맷으로 출력하세요 (Markdown 없이):
     {
+        "marketability": 80,
+        "profitability": 70,
+        "innovation": 85,
+        "feasibility": 90,
+        "growth_potential": 75,
+        "comment": "한 줄 총평..."
+    }
+    """
+    
+    messages_with_system = [{"role": "system", "content": rating_system_prompt}] + messages
+    
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages_with_system,
+        response_format={"type": "json_object"}
+    )
+    return response.choices[0].message.content
+
+
+def generate_panel_discussion(client, messages, model="gpt-4o"):
+    panel_system_prompt = """
+    당신은 '스타트업 가상 자문단'의 서기입니다.
+    사용자가 창업 아이템을 제시하면, 3명의 전문가가 서로 논쟁하고 토의하는 '대본'을 작성해 주세요.
+    
+    참여 전문가:
+    1. 🦅 냉철한 VC (Investment Risk): 수익성, 시장 규모, 경쟁 우위 등을 비판적으로 공격.
+    2. 📣 MZ 마케터 (Viral Potential): 트렌드, 바이럴 요소, 브랜딩 관점에서 옹호하거나 제안.
+    3. 💻 기술 CTO (Feasibility): 기술적 구현 난이도, 개발 비용, 현실성 지적.
+
+    형식:
+    - 3명이 서로 대화하듯이 티키타카(Turn-taking)가 이루어져야 합니다.
+    - 총 6~8턴 정도의 대화를 생성하세요.
+    - 마지막에는 '사회자'가 요약 한마디를 합니다.
+
+    반드시 아래 JSON 포맷으로 출력하세요 (Markdown 없이):
+    {
         "discussion": [
             {"speaker": "VC", "message": "이거 수익 모델이..."},
             {"speaker": "Marketer", "message": "에이, 요즘은..."},
             {"speaker": "CTO", "message": "기술적으로는..."},
+            ...
             {"speaker": "Moderator", "message": "종합해보면..."}
         ]
     }
     """
     
-    messages_with_system = [{"role": "system", "content": rating_system_prompt}] + messages
+    messages_with_system = [{"role": "system", "content": panel_system_prompt}] + messages
     
     response = client.chat.completions.create(
         model=model,

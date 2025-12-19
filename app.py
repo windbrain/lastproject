@@ -313,6 +313,11 @@ with tab_bmc:
                 try:
                     with st.spinner("5가지 핵심 지표를 분석 중입니다..."):
                         ratings_json = chat_service.analyze_ratings(client, st.session_state["messages"])
+                        
+                        # 디버깅: 원본 데이터 확인
+                        with st.expander("🔍 진단 결과 JSON 데이터 확인 (디버깅용)"):
+                            st.code(ratings_json, language="json")
+
                         # JSON 전처리
                         if ratings_json.startswith("```json"):
                             ratings_json = ratings_json.replace("```json", "").replace("```", "")
